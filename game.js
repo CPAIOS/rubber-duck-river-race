@@ -23,7 +23,7 @@ const gameState = {
     isJumping: false,
     jumpVelocity: 0,
     jumpHeight: 0,
-    baseHeight: -0.4, // Duck sits deeper in water, more submerged (was -0.2)
+    baseHeight: 0.2, // Duck sits ON water surface (was -0.4 which was underwater!)
     waveTime: 0,
     // Physics-based motion
     duckVelocityX: 0,
@@ -37,6 +37,8 @@ const gameState = {
     levelThreshold: 1500, // Distance to reach next level
     // Waterfall tracking
     hasTakenWaterfallDamage: false,
+    // Grace period to prevent immediate damage on start
+    startGracePeriod: 0,
     // 🎢 SPLINE PATH SYSTEM
     splineT: 0, // Position on spline (0.0 to 1.0)
     currentSection: null, // Current themed section
@@ -164,6 +166,11 @@ const waterSections = [];
 
 // 🎢 Spline Path System for curved log flume course
 let splinePath = null;
+
+// 🦅 Eagle variables (module-level scope)
+let eagle = null;
+let eagleHasAttacked = false;
+let eagleAttackTime = 0;
 
 const createRealWater = () => {
     // Create MULTIPLE water sections for infinite river!
@@ -920,7 +927,9 @@ loader.load('Rubber Duck.glb', (gltf) => {
 
     // Scale down and rotate to look more duck-like
     duckModel.scale.set(0.8, 0.8, 0.8);
-    duckModel.rotation.y = Math.PI; // Face forward (180 degree flip)
+    duckModel.rotation.x = Math.PI; // Flip 180 degrees on X axis to fix upside-down model
+    duckModel.rotation.y = 0; // No Y rotation
+    duckModel.rotation.z = 0; // No roll
 
     // Enable shadows
     duckModel.traverse((child) => {
@@ -2024,13 +2033,14 @@ const init = () => {
 
     // 🦅 Create golden eagle that swoops once
     console.log('🦅 Loading golden eagle model...');
-    let eagle = null;
-    let eagleHasAttacked = false;
-    let eagleAttackTime = 0;
+    // Eagle variables are now declared at module level
+    eagle = null;
+    eagleHasAttacked = false;
+    eagleAttackTime = 0;
 
     loader.load('Golden eagle.glb', (gltf) => {
         eagle = gltf.scene;
-        eagle.scale.set(3, 3, 3); // Scale up the eagle
+        eagle.scale.set(1.5, 1.5, 1.5); // Scaled down from 3 to 1.5 (half the size)
 
         // Enable shadows
         eagle.traverse((child) => {
@@ -2041,8 +2051,12 @@ const init = () => {
         });
 
         // Start eagle high in the sky, off to the side
-        eagle.position.set(-30, 40, -1000); // Will trigger around mid-course
+        // Position eagle at the trigger distance (1000m into the course)
+        const eagleTriggerT = splinePath.distanceToT(1000);
+        const eagleTriggerPos = splinePath.getPointAt(eagleTriggerT);
+        eagle.position.set(-30, 40, eagleTriggerPos.z); // Positioned at 1000m mark
         eagle.rotation.y = Math.PI / 2; // Face towards the river
+        console.log(`🦅 Eagle positioned at z=${eagleTriggerPos.z.toFixed(1)} (will attack at distance=1000m)`);
 
         scene.add(eagle);
         console.log('✅ Golden eagle model loaded');
@@ -2192,25 +2206,41 @@ const init = () => {
 
 // Start game
 const startGame = () => {
+    console.log('🎮 Starting game...');
     gameState.isPlaying = true;
     gameState.health = 100;
     gameState.distance = 0;
     gameState.score = 0;
     gameState.speed = gameState.targetSpeed;
     gameState.duckPosition = 0;
-    gameState.splineT = 0; // RESET position to start of course
+    gameState.splineT = 0; // Start at beginning of course
     gameState.level = 1; // RESET level
     gameState.duckVelocityY = 0; // RESET vertical velocity
     gameState.jumpHeight = 0; // RESET jump
     gameState.isJumping = false; // RESET jump state
+    gameState.hasTakenWaterfallDamage = false; // RESET waterfall damage flag
+    gameState.startGracePeriod = 30; // 30 frames (~0.5 second) grace for collision only
     gameState.startTime = Date.now();
 
+    // Reset eagle attack
+    eagleHasAttacked = false;
+    eagleAttackTime = 0;
+    if (eagle) {
+        const eagleTriggerT = splinePath.distanceToT(1000);
+        const eagleTriggerPos = splinePath.getPointAt(eagleTriggerT);
+        eagle.position.set(-30, 40, eagleTriggerPos.z);
+        console.log('🦅 Eagle reset to starting position');
+    }
+
+    console.log('✅ Game state reset');
+
     // Reset duck position to start
-    const startPos = splinePath.getPointAt(0);
+    const startPos = splinePath.getPointAt(0); // Start at beginning
     duck.position.copy(startPos);
     duck.position.y = startPos.y + gameState.baseHeight;
     duck.rotation.x = 0;
     duck.rotation.z = 0;
+    console.log(`🦆 Duck reset to: x=${duck.position.x.toFixed(1)}, y=${duck.position.y.toFixed(1)}, z=${duck.position.z.toFixed(1)}, waterLevel=${startPos.y.toFixed(1)}`);
 
     // Clear existing obstacles
     obstacles.forEach(obstacle => scene.remove(obstacle));
@@ -2258,6 +2288,10 @@ const checkCollision = (obj1, obj2, threshold = 2) => {
 // Game loop
 const gameLoop = () => {
     if (gameState.isPlaying) {
+        // Decrease grace period counter
+        if (gameState.startGracePeriod > 0) {
+            gameState.startGracePeriod--;
+        }
         // Duck controls - using same logic as truck from reference game
         let moveSpeed = 0.15;
 
@@ -2491,7 +2525,7 @@ const gameLoop = () => {
         if (isFalling && duck.position.y > currentWaterLevel + gameState.baseHeight + 2) {
             // Duck is ABOVE the water, actively falling!
 
-            // Apply damage once when first going over ANY drop
+            // Apply damage once when first going over ANY drop (waterfall damage always applies!)
             if (!gameState.hasTakenWaterfallDamage && slope < -0.5) {
                 // Only damage on BIG drops (slope < -0.5 = very steep)
                 const isPerfectJump = gameState.isJumping;
@@ -2502,7 +2536,7 @@ const gameLoop = () => {
                 } else {
                     const dropSize = Math.abs(slope) * 30; // Estimate drop height
                     const damage = Math.min(30, Math.floor(dropSize));
-                    console.log(`💦 Fell ${dropSize.toFixed(0)}ft - ${damage} damage!`);
+                    console.log(`💦 WATERFALL DAMAGE! Fell ${dropSize.toFixed(0)}ft - ${damage} damage! Distance: ${gameState.distance.toFixed(0)}m, Health: ${gameState.health} -> ${gameState.health - damage}`);
                     gameState.health -= damage;
                 }
                 gameState.hasTakenWaterfallDamage = true;
@@ -2535,9 +2569,10 @@ const gameLoop = () => {
         }
 
         // Camera follows duck - adjusted for river view AND elevation
+        camera.position.x = duck.position.x; // Follow duck's X position
         camera.position.z = duck.position.z - 18; // Reversed: camera behind duck now
-        // Camera follows duck's elevation (raised higher for better view)
-        camera.position.y = duck.position.y + 16; // Raised from 12 to 16
+        // Camera follows duck's elevation (raised higher for better view) + absolute minimum height
+        camera.position.y = Math.max(20, duck.position.y + 16); // Raised from 12 to 16, min 20 units above ground
         camera.lookAt(duck.position.x, duck.position.y + 2, duck.position.z + 10); // Reversed: look ahead, slightly higher
 
         // DISABLED: Moving terrain walls (causing performance issues and visual problems)
@@ -2757,8 +2792,8 @@ const gameLoop = () => {
                 }
             }
 
-            // Collision detection - check for obstacles
-            if (checkCollision(duck, obstacle)) {
+            // Collision detection - check for obstacles (skip during grace period)
+            if (gameState.startGracePeriod === 0 && checkCollision(duck, obstacle)) {
                 if (obstacle.userData.type === 'rapids' || obstacle.userData.type === 'shader_rapids') {
                     // Rapids already handled above with physics
                     // Extra damage if you hit a rock
@@ -2795,7 +2830,7 @@ const gameLoop = () => {
         if (eagle && !eagleHasAttacked && gameState.distance > 1000 && gameState.distance < 1100) {
             eagleHasAttacked = true;
             eagleAttackTime = Date.now();
-            console.log('🦅 Eagle attack triggered!');
+            console.log(`🦅 EAGLE ATTACK TRIGGERED! Distance: ${gameState.distance.toFixed(0)}m, Duck at z=${duck.position.z.toFixed(1)}, Eagle at z=${eagle.position.z.toFixed(1)}`);
         }
 
         if (eagle && eagleHasAttacked) {

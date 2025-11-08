@@ -17,78 +17,79 @@ export class SplinePathSystem {
     createLogFlumeCoursePath() {
         console.log('🎢 Building EXTREME Log Flume Course...');
 
-        // IMPROVED WAYPOINTS with steeper slopes and better variety
+        // COURSE STARTS HIGH, DROPS AT THE END!
         this.waypoints = [
-            // 🌲 ACT 1: PEACEFUL FOREST START (0-400m)
-            new THREE.Vector3(0, 0, 0),           // Start
-            new THREE.Vector3(-5, 0, -50),        // Gentle left
-            new THREE.Vector3(8, -1, -100),       // S-curve right, slight dip
-            new THREE.Vector3(-3, -2, -150),      // S-curve back, drop
-            new THREE.Vector3(5, -4, -200),       // Small dip
-            new THREE.Vector3(0, -5, -250),       // Straighten
-            new THREE.Vector3(-8, -7, -300),      // Left turn with small drop
-            new THREE.Vector3(0, -10, -400),      // First rapids zone
+            // 🌲 ACT 1: PEACEFUL FOREST START (0-400m) - Start HIGH
+            new THREE.Vector3(0, 460, 0),         // Start HIGH at 460
+            new THREE.Vector3(-5, 458, -50),      // Gentle left, tiny drop
+            new THREE.Vector3(8, 456, -100),      // S-curve right, slight dip
+            new THREE.Vector3(-3, 454, -150),     // S-curve back
+            new THREE.Vector3(5, 452, -200),      // Gentle slope
+            new THREE.Vector3(0, 450, -250),      // Continue
+            new THREE.Vector3(-8, 448, -300),     // Left turn
+            new THREE.Vector3(0, 446, -400),      // First rapids zone
 
-            // 🏔️ ACT 2: CANYON RAPIDS (400-900m)
-            new THREE.Vector3(12, -12, -450),     // Sharp right into canyon
-            new THREE.Vector3(15, -16, -500),     // Drop 1 (4 units / ~12 feet)
-            new THREE.Vector3(10, -16, -550),     // Curve left
-            new THREE.Vector3(-10, -20, -600),    // Sharp S-curve + DROP
-            new THREE.Vector3(-15, -24, -650),    // Drop 2 (4 units / ~12 feet)
-            new THREE.Vector3(-8, -24, -700),     // Straighten
-            new THREE.Vector3(0, -28, -750),      // Drop 3 (4 units / ~12 feet)
-            new THREE.Vector3(10, -28, -800),     // Banked right turn
-            new THREE.Vector3(5, -32, -850),      // Gentle drop
-            new THREE.Vector3(0, -35, -900),      // Canyon depths
+            // 🏔️ ACT 2: CANYON RAPIDS (400-900m) - Small drops
+            new THREE.Vector3(12, 443, -450),     // Sharp right, drop
+            new THREE.Vector3(15, 440, -500),     // Small 3ft drop
+            new THREE.Vector3(10, 436, -550),     // Another drop
+            new THREE.Vector3(-10, 432, -600),    // Sharp S-curve + DROP
+            new THREE.Vector3(-15, 428, -650),    // 4ft drop
+            new THREE.Vector3(-8, 424, -700),     // Continue down
+            new THREE.Vector3(0, 420, -750),      // Drop continues
+            new THREE.Vector3(10, 416, -800),     // Banked turn + drop
+            new THREE.Vector3(5, 412, -850),      // Steeper now
+            new THREE.Vector3(0, 408, -900),      // Canyon depths
 
-            // 🌑 ACT 3: DARK CAVE - gentle descent (900-1200m)
-            new THREE.Vector3(-5, -35, -950),     // Cave entrance
-            new THREE.Vector3(-8, -37, -1000),    // Winding
-            new THREE.Vector3(0, -39, -1050),     // Tight section
-            new THREE.Vector3(8, -41, -1100),     // Keep winding
-            new THREE.Vector3(5, -43, -1150),     // Gentle slope
-            new THREE.Vector3(-5, -45, -1200),    // Continue
+            // 🌑 ACT 3: DARK CAVE (900-1200m) - Medium drops
+            new THREE.Vector3(-5, 403, -950),     // Cave entrance, drop
+            new THREE.Vector3(-8, 398, -1000),    // 5ft drop
+            new THREE.Vector3(0, 392, -1050),     // 6ft drop
+            new THREE.Vector3(8, 386, -1100),     // Getting steeper
+            new THREE.Vector3(5, 380, -1150),     // Continue
+            new THREE.Vector3(-5, 373, -1200),    // 7ft drop
 
-            // 💥 DROP #1 at ~1250m - Small warmup drop (AFTER REVERSE = EARLY)
-            new THREE.Vector3(0, -45, -1250),     // Approach DROP #1
-            new THREE.Vector3(0, -45, -1280),     // Edge!
-            new THREE.Vector3(0, -55, -1300),     // Small 10-foot drop
-            new THREE.Vector3(0, -57, -1350),     // Recovery
+            // 🌊 ACT 4: WINDING RIVER (1200-1700m) - Bigger drops
+            new THREE.Vector3(0, 366, -1250),     // 7ft drop
+            new THREE.Vector3(-5, 358, -1300),    // 8ft drop
+            new THREE.Vector3(0, 350, -1350),     // Getting bigger
+            new THREE.Vector3(5, 341, -1400),     // 9ft drop
+            new THREE.Vector3(-5, 332, -1450),    // 9ft drop
+            new THREE.Vector3(0, 323, -1500),     // Steeper
+            new THREE.Vector3(5, 313, -1550),     // 10ft drop
+            new THREE.Vector3(-5, 303, -1600),    // 10ft drop
+            new THREE.Vector3(0, 293, -1650),     // Continue
+            new THREE.Vector3(0, 283, -1700),     // Building tension
 
-            // 🌊 ACT 4: WINDING RIVER - long gentle section (1350-1700m)
-            new THREE.Vector3(-5, -59, -1400),    // S-curve
-            new THREE.Vector3(0, -61, -1450),     // Straighten
-            new THREE.Vector3(5, -63, -1500),     // Curve right
-            new THREE.Vector3(-5, -65, -1550),    // Curve left
-            new THREE.Vector3(0, -67, -1600),     // Straighten
-            new THREE.Vector3(0, -69, -1650),     // Continue
-            new THREE.Vector3(0, -71, -1700),     // Keep going
+            // 🏔️ ACT 5: BUILD-UP TO MEGA DROPS (1700-2000m)
+            new THREE.Vector3(5, 273, -1750),     // 10ft drop
+            new THREE.Vector3(-5, 261, -1800),    // 12ft drop
+            new THREE.Vector3(0, 248, -1850),     // 13ft drop
+            new THREE.Vector3(5, 234, -1900),     // 14ft drop
+            new THREE.Vector3(-5, 218, -1950),    // 16ft drop
+            new THREE.Vector3(0, 200, -2000),     // 18ft drop
 
-            // 💥💥 DROP #2 at ~1750m - Medium drop (AFTER REVERSE = MID COURSE)
-            new THREE.Vector3(0, -71, -1750),     // Approach DROP #2
-            new THREE.Vector3(0, -71, -1780),     // Edge!
-            new THREE.Vector3(0, -92, -1800),     // 20-foot drop!
-            new THREE.Vector3(0, -97, -1850),     // Recovery
+            // 💥 DROP #1 at ~2050m - Big 25ft drop
+            new THREE.Vector3(0, 198, -2050),     // Edge
+            new THREE.Vector3(0, 173, -2100),     // 25ft DROP!
 
-            // 🏔️ ACT 5: BUILD-UP TO MEGA DROP (1850-2050m)
-            new THREE.Vector3(5, -99, -1900),     // Gentle curve
-            new THREE.Vector3(-5, -101, -1950),   // S-curve
-            new THREE.Vector3(0, -103, -2000),    // Straighten
-            new THREE.Vector3(0, -105, -2030),    // Approaching...
+            // 💥💥 DROP #2 at ~2150m - Huge 35ft drop
+            new THREE.Vector3(0, 170, -2150),     // Brief recovery
+            new THREE.Vector3(0, 135, -2200),     // 35ft DROP!
 
-            // 💥💥💥 MEGA DROP at ~2050m - BIGGEST DROP AT THE VERY END!
-            new THREE.Vector3(0, -105, -2050),    // Edge of MEGA DROP!!!
-            new THREE.Vector3(0, -120, -2060),    // Start falling!
-            new THREE.Vector3(0, -155, -2073),    // FALLING FAST!
-            new THREE.Vector3(0, -200, -2087),    // OMG SO STEEP!
-            new THREE.Vector3(0, -240, -2097),    // MASSIVE 135-FOOT DROP!!!
-            new THREE.Vector3(0, -245, -2100)     // FINISH LINE!
+            // 💥💥💥 MEGA DROP at ~2250m - MASSIVE 100ft DROP!
+            new THREE.Vector3(0, 128, -2250),     // Edge of MEGA DROP!!!
+            new THREE.Vector3(0, 98, -2270),      // Falling!
+            new THREE.Vector3(0, 58, -2285),      // FALLING FAST!
+            new THREE.Vector3(0, 28, -2295),      // OMG SO STEEP!
+            new THREE.Vector3(0, 0, -2300),       // MASSIVE 130-FOOT DROP!!!
+            new THREE.Vector3(0, 0, -2350)        // FINISH LINE!
         ];
 
         // REVERSE the waypoints AND flip Y coordinates so the course flows DOWNHILL
         this.waypoints.reverse();
-        // Flip Y coordinates: what was at y=-75 becomes y=75, what was at y=0 becomes y=0
-        // This makes the START at y=75 (high) and END at y=0 (low) = downhill!
+        // Flip Y coordinates: what was at y=-200 becomes y=200, what was at y=0 becomes y=0
+        // This makes the START at y=200 (high) and END at y=0 (low) = downhill!
         this.waypoints.forEach(waypoint => {
             waypoint.y = -waypoint.y; // Flip Y coordinate
         });
