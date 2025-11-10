@@ -17,91 +17,120 @@ export class SplinePathSystem {
     createLogFlumeCoursePath() {
         console.log('🎢 Building EXTREME Log Flume Course...');
 
-        // COURSE STARTS HIGH, DROPS AT THE END!
+        // Progressive drops with FLAT sections - drops lengthened to 40 z-units to prevent uphill curve
         this.waypoints = [
-            // 🌲 ACT 1: PEACEFUL FOREST START (0-400m) - Start HIGH
-            new THREE.Vector3(0, 460, 0),         // Start HIGH at 460
-            new THREE.Vector3(-5, 458, -50),      // Gentle left, tiny drop
-            new THREE.Vector3(8, 456, -100),      // S-curve right, slight dip
-            new THREE.Vector3(-3, 454, -150),     // S-curve back
-            new THREE.Vector3(5, 452, -200),      // Gentle slope
-            new THREE.Vector3(0, 450, -250),      // Continue
-            new THREE.Vector3(-8, 448, -300),     // Left turn
-            new THREE.Vector3(0, 446, -400),      // First rapids zone
+            // Start - FLAT
+            new THREE.Vector3(0, 100, 0),
+            new THREE.Vector3(-5, 100, -100),
+            new THREE.Vector3(5, 100, -200),
 
-            // 🏔️ ACT 2: CANYON RAPIDS (400-900m) - Small drops
-            new THREE.Vector3(12, 443, -450),     // Sharp right, drop
-            new THREE.Vector3(15, 440, -500),     // Small 3ft drop
-            new THREE.Vector3(10, 436, -550),     // Another drop
-            new THREE.Vector3(-10, 432, -600),    // Sharp S-curve + DROP
-            new THREE.Vector3(-15, 428, -650),    // 4ft drop
-            new THREE.Vector3(-8, 424, -700),     // Continue down
-            new THREE.Vector3(0, 420, -750),      // Drop continues
-            new THREE.Vector3(10, 416, -800),     // Banked turn + drop
-            new THREE.Vector3(5, 412, -850),      // Steeper now
-            new THREE.Vector3(0, 408, -900),      // Canyon depths
+            // DROP #1 - 10ft over 40 units (with intermediate waypoints for linear descent)
+            new THREE.Vector3(0, 100, -210),    // Start of drop
+            new THREE.Vector3(0, 95, -230),     // Mid drop
+            new THREE.Vector3(0, 90, -250),     // End of drop
 
-            // 🌑 ACT 3: DARK CAVE (900-1200m) - Medium drops
-            new THREE.Vector3(-5, 403, -950),     // Cave entrance, drop
-            new THREE.Vector3(-8, 398, -1000),    // 5ft drop
-            new THREE.Vector3(0, 392, -1050),     // 6ft drop
-            new THREE.Vector3(8, 386, -1100),     // Getting steeper
-            new THREE.Vector3(5, 380, -1150),     // Continue
-            new THREE.Vector3(-5, 373, -1200),    // 7ft drop
+            // FLAT
+            new THREE.Vector3(-5, 90, -300),
+            new THREE.Vector3(5, 90, -400),
 
-            // 🌊 ACT 4: WINDING RIVER (1200-1700m) - Bigger drops
-            new THREE.Vector3(0, 366, -1250),     // 7ft drop
-            new THREE.Vector3(-5, 358, -1300),    // 8ft drop
-            new THREE.Vector3(0, 350, -1350),     // Getting bigger
-            new THREE.Vector3(5, 341, -1400),     // 9ft drop
-            new THREE.Vector3(-5, 332, -1450),    // 9ft drop
-            new THREE.Vector3(0, 323, -1500),     // Steeper
-            new THREE.Vector3(5, 313, -1550),     // 10ft drop
-            new THREE.Vector3(-5, 303, -1600),    // 10ft drop
-            new THREE.Vector3(0, 293, -1650),     // Continue
-            new THREE.Vector3(0, 283, -1700),     // Building tension
+            // DROP #2 - 15ft over 40 units (with intermediate waypoints for linear descent)
+            new THREE.Vector3(0, 90, -410),     // Start of drop
+            new THREE.Vector3(0, 82.5, -430),   // Mid drop
+            new THREE.Vector3(0, 75, -450),     // End of drop
 
-            // 🏔️ ACT 5: BUILD-UP TO MEGA DROPS (1700-2000m)
-            new THREE.Vector3(5, 273, -1750),     // 10ft drop
-            new THREE.Vector3(-5, 261, -1800),    // 12ft drop
-            new THREE.Vector3(0, 248, -1850),     // 13ft drop
-            new THREE.Vector3(5, 234, -1900),     // 14ft drop
-            new THREE.Vector3(-5, 218, -1950),    // 16ft drop
-            new THREE.Vector3(0, 200, -2000),     // 18ft drop
+            // FLAT
+            new THREE.Vector3(-5, 75, -500),
+            new THREE.Vector3(5, 75, -600),
 
-            // 💥 DROP #1 at ~2050m - Big 25ft drop
-            new THREE.Vector3(0, 198, -2050),     // Edge
-            new THREE.Vector3(0, 173, -2100),     // 25ft DROP!
+            // DROP #3 - 20ft over 40 units (with intermediate waypoints for linear descent)
+            new THREE.Vector3(0, 75, -610),     // Start of drop
+            new THREE.Vector3(0, 65, -630),     // Mid drop
+            new THREE.Vector3(0, 55, -650),     // End of drop
 
-            // 💥💥 DROP #2 at ~2150m - Huge 35ft drop
-            new THREE.Vector3(0, 170, -2150),     // Brief recovery
-            new THREE.Vector3(0, 135, -2200),     // 35ft DROP!
+            // FLAT
+            new THREE.Vector3(-5, 55, -700),
+            new THREE.Vector3(5, 55, -800),
 
-            // 💥💥💥 MEGA DROP at ~2250m - MASSIVE 100ft DROP!
-            new THREE.Vector3(0, 128, -2250),     // Edge of MEGA DROP!!!
-            new THREE.Vector3(0, 98, -2270),      // Falling!
-            new THREE.Vector3(0, 58, -2285),      // FALLING FAST!
-            new THREE.Vector3(0, 28, -2295),      // OMG SO STEEP!
-            new THREE.Vector3(0, 0, -2300),       // MASSIVE 130-FOOT DROP!!!
-            new THREE.Vector3(0, 0, -2350)        // FINISH LINE!
+            // DROP #4 - 25ft over 40 units (with intermediate waypoints for linear descent)
+            new THREE.Vector3(0, 55, -810),     // Start of drop
+            new THREE.Vector3(0, 42.5, -830),   // Mid drop
+            new THREE.Vector3(0, 30, -850),     // End of drop
+
+            // FLAT
+            new THREE.Vector3(-5, 30, -900),
+            new THREE.Vector3(5, 30, -1000),
+
+            // DROP #5 - 30ft over 40 units (with intermediate waypoints for linear descent)
+            new THREE.Vector3(0, 30, -1010),    // Start of drop
+            new THREE.Vector3(0, 15, -1030),    // Mid drop
+            new THREE.Vector3(0, 0, -1050),     // End of drop
+
+            // FLAT
+            new THREE.Vector3(-5, 0, -1100),
+            new THREE.Vector3(5, 0, -1200),
+
+            // DROP #6 - 40ft over 40 units (with intermediate waypoints for linear descent)
+            new THREE.Vector3(0, 0, -1210),     // Start of drop
+            new THREE.Vector3(0, -20, -1230),   // Mid drop
+            new THREE.Vector3(0, -40, -1250),   // End of drop
+
+            // FLAT - anchor point right after drop
+            new THREE.Vector3(0, -40, -1270),   // Anchor to prevent overshoot
+            new THREE.Vector3(-5, -40, -1300),
+            new THREE.Vector3(5, -40, -1400),
+
+            // DROP #7 - MEGA 60ft over 50 units (with intermediate waypoints for linear descent)
+            new THREE.Vector3(0, -40, -1410),   // Start of drop
+            new THREE.Vector3(0, -60, -1430),   // 1/3 drop
+            new THREE.Vector3(0, -80, -1445),   // 2/3 drop
+            new THREE.Vector3(0, -100, -1460),  // End of drop
+
+            // FLAT to finish - EXTRA waypoints right after drop to prevent overshoot
+            new THREE.Vector3(0, -100, -1480),  // Anchor point
+            new THREE.Vector3(-5, -100, -1550),
+            new THREE.Vector3(0, -100, -1700),
+            new THREE.Vector3(5, -100, -1850),
+            new THREE.Vector3(0, -100, -2000)  // FINISH!
         ];
 
-        // REVERSE the waypoints AND flip Y coordinates so the course flows DOWNHILL
-        this.waypoints.reverse();
-        // Flip Y coordinates: what was at y=-200 becomes y=200, what was at y=0 becomes y=0
-        // This makes the START at y=200 (high) and END at y=0 (low) = downhill!
-        this.waypoints.forEach(waypoint => {
-            waypoint.y = -waypoint.y; // Flip Y coordinate
-        });
+        // NO transformations - waypoints used as-is
 
-        this.spline = new THREE.CatmullRomCurve3(this.waypoints);
-        this.spline.curveType = 'catmullrom';
-        this.spline.tension = 0.5;
+        // Create initial Catmull-Rom spline
+        const rawSpline = new THREE.CatmullRomCurve3(this.waypoints);
+        rawSpline.curveType = 'chordal';
+        rawSpline.tension = 0;
+        rawSpline.closed = false;
+
+        // 🔥 CRITICAL FIX: Post-process spline to FORCE downhill-only flow
+        // Sample the spline densely, then clamp Y values to eliminate uphill sections
+        console.log('🔧 Post-processing spline to enforce downhill-only flow...');
+        const rawPoints = rawSpline.getPoints(2000);
+        const clampedPoints = [rawPoints[0]];
+        let minYSoFar = rawPoints[0].y;
+        let clampedCount = 0;
+
+        for (let i = 1; i < rawPoints.length; i++) {
+            const point = rawPoints[i].clone();
+            if (point.y > minYSoFar) {
+                point.y = minYSoFar;
+                clampedCount++;
+            } else {
+                minYSoFar = point.y;
+            }
+            clampedPoints.push(point);
+        }
+
+        console.log(`🔧 Clamped ${clampedCount} uphill points out of ${rawPoints.length}`);
+
+        // Create a NEW Catmull-Rom spline from the clamped points
+        this.spline = new THREE.CatmullRomCurve3(clampedPoints);
+        this.spline.curveType = 'chordal';
+        this.spline.tension = 0;
         this.spline.closed = false;
 
         this.totalLength = this.spline.getLength();
 
-        console.log(`✅ EXTREME Spline created: ${this.waypoints.length} waypoints, ${this.totalLength.toFixed(0)}m long`);
+        console.log(`✅ EXTREME Spline created: ${clampedPoints.length} clamped points, ${this.totalLength.toFixed(0)}m long`);
 
         this.createThemedSections();
     }
