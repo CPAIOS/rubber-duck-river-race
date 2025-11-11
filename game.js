@@ -1570,7 +1570,7 @@ const updateCompetitorDucks = (deltaTime) => {
 
                     if (!isHighEnough) {
                         // Rock/log collision - STRONG BUMP BACK!
-                        duck.userData.health -= Math.floor((obstacle.userData.damage || 10) * 0.3);
+                        duck.userData.health -= obstacle.userData.damage || 7; // Direct damage, no multiplier
 
                         // Calculate bump direction (away from obstacle)
                         const bumpAngle = Math.atan2(duck.position.z - obstacle.position.z,
@@ -1795,7 +1795,7 @@ const createRock = (lane, z) => {
     rockGroup.add(rock);
 
     rockGroup.position.set(lane, 0, z);
-    rockGroup.userData = { type: 'rock', damage: 20 };
+    rockGroup.userData = { type: 'rock', damage: 7 };
 
     return rockGroup;
 };
@@ -2165,7 +2165,7 @@ const createLog = (lane, z, waterLevel = 0) => {
 
     // Position at correct water level
     logGroup.position.set(lane, waterLevel, z);
-    logGroup.userData = { type: 'log', damage: 15, rotationSpeed: 0.01 };
+    logGroup.userData = { type: 'log', damage: 5, rotationSpeed: 0.01 };
 
     return logGroup;
 };
@@ -3904,7 +3904,7 @@ const gameLoop = () => {
                     const isHighEnough = gameState.jumpHeight > 2.0;
 
                     if (!isHighEnough) {
-                        gameState.health -= Math.floor((obstacle.userData.damage || 10) * 0.5); // 50% for rubber duck!
+                        gameState.health -= obstacle.userData.damage || 7; // Direct damage, no multiplier
                         gameState.score -= 50;
 
                         // 💥 STRONG BUMP BACK PHYSICS - Obstacle collision!
