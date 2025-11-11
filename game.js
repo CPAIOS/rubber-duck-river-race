@@ -1273,15 +1273,15 @@ const createCompetitorDuck = (color, raceNumber) => {
     const skillRoll = Math.random();
     let aiSkill, baseSpeed, aiType;
 
-    if (skillRoll < 0.15) { // 15% Elite racers - THE REAL COMPETITION!
+    if (skillRoll < 0.05) { // 5% Elite racers - THE REAL COMPETITION! (~7-8 ducks)
         aiSkill = 'elite';
         baseSpeed = 0.75 + Math.random() * 0.05; // 0.75-0.80 speed (AT full throttle!)
         aiType = 'aggressive'; // Will try to stay ahead
-    } else if (skillRoll < 0.35) { // 20% Good racers
+    } else if (skillRoll < 0.20) { // 15% Good racers (~22 ducks)
         aiSkill = 'good';
         baseSpeed = 0.60 + Math.random() * 0.15; // 0.60-0.75 speed
         aiType = 'competitive'; // Will speed up if behind
-    } else { // 65% Average racers
+    } else { // 80% Average racers (~120 ducks)
         aiSkill = 'average';
         baseSpeed = 0.35 + Math.random() * 0.25; // 0.35-0.60 speed
         aiType = 'casual'; // Steady pace
@@ -1301,7 +1301,10 @@ const createCompetitorDuck = (color, raceNumber) => {
         steerCooldown: 0, // Frames until next steer decision
         boostCooldown: 0, // Frames until can boost again
         distance: 0, // Distance along course
-        health: 100
+        health: 100,
+        isJumping: false, // Can jump over obstacles
+        jumpHeight: 0, // Current jump height
+        jumpVelocity: 0 // Jump velocity
     };
 
     return duckGroup;
@@ -1449,17 +1452,50 @@ const updateCompetitorDucks = (deltaTime) => {
 
         duck.userData.xPosition = Math.max(-8, Math.min(8, duck.userData.xPosition)); // Hard limit
 
+        // 🦆 AI JUMP DETECTION - look ahead for obstacles
+        if (!duck.userData.isJumping) {
+            obstacles.forEach(obstacle => {
+                if (obstacle.userData.type === 'rock' || obstacle.userData.type === 'log') {
+                    const distAhead = obstacle.position.z - duck.position.z;
+                    const xDist = Math.abs(obstacle.position.x - duck.userData.xPosition);
+
+                    // Elite ducks jump earlier and more accurately
+                    const jumpDistance = duck.userData.aiSkill === 'elite' ? 8 : 5;
+
+                    if (distAhead > 0 && distAhead < jumpDistance && xDist < 3) {
+                        // Obstacle ahead! Jump!
+                        duck.userData.isJumping = true;
+                        duck.userData.jumpHeight = 0;
+                        duck.userData.jumpVelocity = 0.25; // Jump strength
+                    }
+                }
+            });
+        }
+
+        // 🦆 AI JUMP PHYSICS
+        if (duck.userData.isJumping) {
+            duck.userData.jumpHeight += duck.userData.jumpVelocity;
+            duck.userData.jumpVelocity -= 0.015; // Gravity
+
+            if (duck.userData.jumpHeight <= 0) {
+                duck.userData.jumpHeight = 0;
+                duck.userData.isJumping = false;
+            }
+        }
+
         // Get position along spline
         const t = splinePath.distanceToT(duck.userData.distance);
         const pathPos = splinePath.getPointAt(t);
 
-        // Update position
+        // Update position (includes jump height)
         duck.position.x = duck.userData.xPosition;
-        duck.position.y = pathPos.y + 0.2;
+        duck.position.y = pathPos.y + 0.2 + duck.userData.jumpHeight;
         duck.position.z = pathPos.z;
 
-        // Simple wave bobbing
-        duck.position.y += Math.sin(Date.now() * 0.002 + duck.userData.raceNumber) * 0.1;
+        // Simple wave bobbing (only when not jumping)
+        if (!duck.userData.isJumping) {
+            duck.position.y += Math.sin(Date.now() * 0.002 + duck.userData.raceNumber) * 0.1;
+        }
 
         // 🪨💥 Competitor Duck Obstacle Collision Detection & Physics
         obstacles.forEach(obstacle => {
@@ -1473,26 +1509,30 @@ const updateCompetitorDucks = (deltaTime) => {
                     // Rapids damage (reduced) but no bump back
                     duck.userData.health -= Math.floor((obstacle.userData.damage || 15) * 0.3);
                 } else if (obstacle.userData.type === 'rock' || obstacle.userData.type === 'log') {
-                    // Rock/log collision - BUMP BACK!
-                    duck.userData.health -= Math.floor((obstacle.userData.damage || 10) * 0.3);
+                    // Check if duck jumped high enough to clear obstacle
+                    const isHighEnough = duck.userData.jumpHeight > 1.5;
 
-                    // Calculate bump direction (away from obstacle)
-                    const bumpAngle = Math.atan2(duck.position.z - obstacle.position.z,
-                                                   duck.position.x - obstacle.position.x);
-                    const bumpForce = (2 - dist) * 2; // Stronger bump when closer
+                    if (!isHighEnough) {
+                        // Rock/log collision - BUMP BACK!
+                        duck.userData.health -= Math.floor((obstacle.userData.damage || 10) * 0.3);
 
-                    // Bump duck sideways (X direction)
-                    duck.userData.xPosition += Math.cos(bumpAngle) * bumpForce;
-                    duck.userData.xPosition = Math.max(-8, Math.min(8, duck.userData.xPosition));
+                        // Calculate bump direction (away from obstacle)
+                        const bumpAngle = Math.atan2(duck.position.z - obstacle.position.z,
+                                                       duck.position.x - obstacle.position.x);
+                        const bumpForce = (2 - dist) * 2; // Stronger bump when closer
 
-                    // Slow down the duck significantly
-                    duck.userData.currentSpeed *= 0.5; // Lose 50% speed on collision!
-                    duck.userData.distance -= bumpForce * 0.5; // Bump backward in Z too
+                        // Bump duck sideways (X direction)
+                        duck.userData.xPosition += Math.cos(bumpAngle) * bumpForce;
+                        duck.userData.xPosition = Math.max(-8, Math.min(8, duck.userData.xPosition));
+
+                        // Slow down the duck significantly
+                        duck.userData.currentSpeed *= 0.5; // Lose 50% speed on collision!
+                        duck.userData.distance -= bumpForce * 0.5; // Bump backward in Z too
+                    }
                 }
 
                 // Check if duck died from obstacle
                 if (duck.userData.health <= 0) {
-                    console.log(`💀 Competitor duck #${duck.userData.raceNumber} eliminated by obstacle!`);
                     duck.visible = false; // Duck is out!
                 }
             }
@@ -1517,7 +1557,7 @@ const updateCompetitorDucks = (deltaTime) => {
         const duck1 = competitorDucks[i];
         if (!duck1.userData) continue;
 
-        // Check collision with player duck - BOTH ducks get pushed!
+        // Check collision with player duck - BOTH ducks get pushed AND slowed!
         const distToPlayer = Math.sqrt(
             Math.pow(duck1.position.x - duck.position.x, 2) +
             Math.pow(duck1.position.z - duck.position.z, 2)
@@ -1531,9 +1571,15 @@ const updateCompetitorDucks = (deltaTime) => {
             duck1.userData.xPosition += Math.cos(angle) * pushForce;
             duck1.userData.xPosition = Math.max(-8, Math.min(8, duck1.userData.xPosition));
 
+            // Slow down competitor duck
+            duck1.userData.currentSpeed *= 0.95; // Lose 5% speed
+
             // Push PLAYER duck away too!
             gameState.duckPosition -= Math.cos(angle) * pushForce * 0.5; // 50% force on player
             gameState.duckPosition = Math.max(-8, Math.min(8, gameState.duckPosition));
+
+            // Slow down player duck
+            gameState.speed *= 0.95; // Lose 5% speed
         }
 
         // Check collision with other competitor ducks
@@ -1547,12 +1593,16 @@ const updateCompetitorDucks = (deltaTime) => {
             );
 
             if (dist < COLLISION_RADIUS && dist > 0.1) {
-                // Ducks collide! Push them apart with stronger force
+                // Ducks collide! Push them apart AND slow them down
                 const angle = Math.atan2(duck1.position.z - duck2.position.z, duck1.position.x - duck2.position.x);
                 const pushForce = (COLLISION_RADIUS - dist) * 0.25; // Stronger push
 
                 duck1.userData.xPosition += Math.cos(angle) * pushForce;
                 duck2.userData.xPosition -= Math.cos(angle) * pushForce;
+
+                // Slow down both ducks slightly
+                duck1.userData.currentSpeed *= 0.97; // Lose 3% speed
+                duck2.userData.currentSpeed *= 0.97; // Lose 3% speed
 
                 // Keep in bounds
                 duck1.userData.xPosition = Math.max(-8, Math.min(8, duck1.userData.xPosition));
@@ -2620,7 +2670,7 @@ const init = () => {
         { lane: 8, distance: 1900 }
     ];
 
-    console.log('🪨🪨🪨 STARTING ROCK PLACEMENT - 20 ROCKS INCOMING 🪨🪨🪨');
+    // Place rocks without excessive logging for better performance
     level1RockPositions.forEach(pos => {
         const rockT = splinePath.distanceToT(pos.distance);
         const rockPos = splinePath.getPointAt(rockT);
@@ -2629,9 +2679,8 @@ const init = () => {
         rock.position.y = rockPos.y;
         scene.add(rock);
         obstacles.push(rock);
-        console.log(`🪨 ROCK PLACED: lane=${pos.lane}, distance=${pos.distance}m, T=${rockT.toFixed(3)}, x=${rock.position.x.toFixed(1)}, y=${rock.position.y.toFixed(1)}, z=${rock.position.z.toFixed(1)}`);
     });
-    console.log(`✅✅✅ ${level1RockPositions.length} LEVEL 1 ROCKS PLACED ✅✅✅`);
+    console.log(`✅ Placed ${level1RockPositions.length} rocks`);
 
     // 🦅 Create golden eagle that swoops once
     console.log('🦅 Loading golden eagle model...');
