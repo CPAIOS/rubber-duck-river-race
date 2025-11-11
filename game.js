@@ -1083,8 +1083,8 @@ const addNumberBadgeToDuck = (duckGroup, number) => {
     flag.rotation.y = 0; // Face forward/backward (parallel to duck direction)
     flagAssembly.add(flag);
 
-    // Position flag assembly coming from duck's BACK (tail area)
-    flagAssembly.position.set(0, 0.2, 0.8); // Center, low on body, behind duck
+    // Position flag assembly from BACK RIGHT corner of duck body, near tail
+    flagAssembly.position.set(0.5, 0.1, 1.0); // Right side, very low, at back near tail
     flagAssembly.rotation.y = 0; // No rotation - flag extends straight to the side
     duckModel.add(flagAssembly);
 
@@ -1243,13 +1243,17 @@ const spawnCompetitorDucks = () => {
 
         const competitorDuck = createCompetitorDuck(color, raceNumber);
 
-        // Position in grid
+        // Position in grid - spread behind starting line
         const xPos = (col - ducksPerRow / 2) * duckSpacing;
-        const zPos = startPos.z + 10 + (row * rowSpacing); // Behind starting line
 
-        competitorDuck.position.set(xPos, startPos.y + 0.2, zPos);
+        // Start all ducks at small positive distances (0-30m) so spline works correctly
+        const distance = row * rowSpacing;
+        const duckT = splinePath.distanceToT(distance);
+        const duckPos = splinePath.getPointAt(duckT);
+
+        competitorDuck.position.set(xPos, duckPos.y + 0.2, duckPos.z);
         competitorDuck.userData.xPosition = xPos;
-        competitorDuck.userData.distance = -10 - (row * rowSpacing); // Negative = behind start
+        competitorDuck.userData.distance = distance; // Positive distance values
 
         scene.add(competitorDuck);
         competitorDucks.push(competitorDuck);
