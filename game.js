@@ -2847,7 +2847,7 @@ const init = () => {
 
     // 🏁 Create Starting Line Banner with Rotary Logo - realistic hanging setup
     console.log('🏁 Creating starting line banner...');
-    textureLoader.load('rotary_logo_2.png', (startingLogo) => {
+    textureLoader.load('rotary_3.png', (startingLogo) => {
         console.log('✅ Starting line banner logo loaded');
 
         // Get starting position - place banner at 50m (well ahead of player at 15m start)
