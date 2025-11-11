@@ -1031,62 +1031,51 @@ const addNumberBadgeToDuck = (duckGroup, number) => {
     const flagAssembly = new THREE.Group();
     flagAssembly.name = 'flagAssembly';
 
-    // Create flagpole (thin wire-like cylinder)
-    const poleHeight = 2.0;
-    const poleRadius = 0.012; // Very thin wire!
-    const poleGeometry = new THREE.CylinderGeometry(poleRadius, poleRadius, poleHeight, 6);
+    // Thin wire pole - EXACT COPY from competitor duck code
+    const poleHeight = 1.6;
+    const poleRadius = 0.01;
+    const poleGeometry = new THREE.CylinderGeometry(poleRadius, poleRadius, poleHeight, 4);
     const poleMaterial = new THREE.MeshStandardMaterial({
-        color: 0xC0C0C0, // Metallic silver
+        color: 0xC0C0C0,
         roughness: 0.3,
         metalness: 0.9
     });
     const pole = new THREE.Mesh(poleGeometry, poleMaterial);
-    pole.position.y = poleHeight / 2; // Bottom at y=0, top at poleHeight
+    pole.position.y = poleHeight / 2;
     flagAssembly.add(pole);
 
-    // Create canvas with number for flag
+    // Create canvas with number - EXACT COPY from competitor duck code
     const canvas = document.createElement('canvas');
-    canvas.width = 256;
-    canvas.height = 180;
+    canvas.width = 128;
+    canvas.height = 90;
     const ctx = canvas.getContext('2d');
-
-    // Draw flag background (white with thin black border)
     ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(0, 0, 256, 180);
+    ctx.fillRect(0, 0, 128, 90);
     ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 3; // Thinner border
-    ctx.strokeRect(2, 2, 252, 176);
-
-    // Draw number on flag (thinner font)
+    ctx.lineWidth = 2;
+    ctx.strokeRect(1, 1, 126, 88);
     ctx.fillStyle = '#000000';
-    ctx.font = '80px Arial'; // Thinner, not bold
+    ctx.font = '60px Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(number.toString(), 128, 90);
+    ctx.fillText(number.toString(), 64, 45);
 
-    // Create texture from canvas
+    // Create flag - EXACT COPY from competitor duck code
     const flagTexture = new THREE.CanvasTexture(canvas);
     const flagMaterial = new THREE.MeshBasicMaterial({
         map: flagTexture,
-        side: THREE.DoubleSide,
-        transparent: false
+        side: THREE.DoubleSide
     });
-
-    // Create flag (rectangular, sticks out horizontally)
-    const flagWidth = 0.8;
-    const flagHeight = 0.6;
+    const flagWidth = 0.6;
+    const flagHeight = 0.4;
     const flagGeometry = new THREE.PlaneGeometry(flagWidth, flagHeight);
     const flag = new THREE.Mesh(flagGeometry, flagMaterial);
-
-    // Position flag at top of pole - flag extends horizontally from pole
-    flag.position.set(flagWidth / 2, poleHeight - flagHeight / 2, 0); // Flag extends in +X direction
-    flag.rotation.y = 0; // Face forward (visible from camera behind duck)
+    flag.position.set(flagWidth / 2, poleHeight - flagHeight / 2, 0);
     flagAssembly.add(flag);
 
-    // Position flag assembly at CENTER BACK of duck body (tail area)
-    // Same position as competitor ducks for consistency
-    flagAssembly.position.set(0, 0.65, 1.0); // Center back, mid-height, at tail
-    flagAssembly.rotation.y = 0; // No rotation - flag extends right
+    // Position flag at center back of duck - EXACT COPY from competitor duck code
+    flagAssembly.position.set(0, 0.65, 1.0);
+    flagAssembly.rotation.y = 0;
     duckModel.add(flagAssembly);
 
     console.log(`🚩 Added race flag #${number} on pole to duck`);
@@ -1162,7 +1151,6 @@ const createDuck = () => {
 
     duckGroup.position.set(0, 0.2, 0);
     duckGroup.rotation.y = 0; // No rotation
-    duckGroup.scale.set(1.2, 1.2, 1.2); // Match competitor duck size
 
     return duckGroup;
 };
@@ -1195,11 +1183,8 @@ const createCompetitorDuck = (color, raceNumber) => {
     const beakMaterial = new THREE.MeshStandardMaterial({ color: 0xFF8800 });
     const beak = new THREE.Mesh(beakGeometry, beakMaterial);
     beak.rotation.x = Math.PI / 2;
-    beak.position.set(0, 1.4, -1.0); // Adjusted to match new scale
+    beak.position.set(0, 1.4, -1.0);
     duckGroup.add(beak);
-
-    // Overall scale to match player duck size
-    duckGroup.scale.set(1.2, 1.2, 1.2);
 
     // Add race number flag
     const flagAssembly = new THREE.Group();
@@ -1258,15 +1243,15 @@ const createCompetitorDuck = (color, raceNumber) => {
 
     if (skillRoll < 0.10) { // 10% Elite racers
         aiSkill = 'elite';
-        baseSpeed = 0.85 + Math.random() * 0.15; // 0.85-1.0 speed
+        baseSpeed = 0.70 + Math.random() * 0.10; // 0.70-0.80 speed (matches player max)
         aiType = 'aggressive'; // Will try to stay ahead
     } else if (skillRoll < 0.30) { // 20% Good racers
         aiSkill = 'good';
-        baseSpeed = 0.70 + Math.random() * 0.15; // 0.70-0.85 speed
+        baseSpeed = 0.60 + Math.random() * 0.10; // 0.60-0.70 speed
         aiType = 'competitive'; // Will speed up if behind
     } else { // 70% Average racers
         aiSkill = 'average';
-        baseSpeed = 0.50 + Math.random() * 0.25; // 0.50-0.75 speed
+        baseSpeed = 0.40 + Math.random() * 0.20; // 0.40-0.60 speed
         aiType = 'casual'; // Steady pace
     }
 
@@ -1377,16 +1362,16 @@ const updateCompetitorDucks = (deltaTime) => {
         if (duck.userData.aiType === 'aggressive') {
             // Elite racers: Always push hard, speed up near player
             if (isNearPlayer && duck.userData.distance <= gameState.distance) {
-                // Player is ahead! Speed up to catch them
-                duck.userData.currentSpeed = Math.min(duck.userData.baseSpeed * 1.15, 1.0);
+                // Player is ahead! Speed up to catch them (capped at player max 0.8)
+                duck.userData.currentSpeed = Math.min(duck.userData.baseSpeed * 1.10, 0.8);
             } else {
                 duck.userData.currentSpeed = duck.userData.baseSpeed;
             }
         } else if (duck.userData.aiType === 'competitive') {
             // Good racers: Speed up if falling behind
             if (isNearPlayer && duck.userData.distance < gameState.distance - 5) {
-                // Falling behind! Speed up
-                duck.userData.currentSpeed = Math.min(duck.userData.baseSpeed * 1.10, 0.9);
+                // Falling behind! Speed up (capped at 0.75)
+                duck.userData.currentSpeed = Math.min(duck.userData.baseSpeed * 1.10, 0.75);
             } else {
                 duck.userData.currentSpeed = duck.userData.baseSpeed;
             }
