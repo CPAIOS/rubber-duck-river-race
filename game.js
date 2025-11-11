@@ -2868,9 +2868,9 @@ const init = () => {
         line.rotation.z = Math.PI / 2; // Rotate to horizontal
         scene.add(line);
 
-        // Create banner hanging from CENTER of line (wider so text isn't cut off)
-        const bannerWidth = 14; // Wider to show full logo
-        const bannerHeight = 5;
+        // Create banner hanging from CENTER of line - better proportions
+        const bannerWidth = 10; // Narrower to reduce stretching
+        const bannerHeight = 6; // Taller for better logo proportions
 
         // Create white background for banner
         const bgGeometry = new THREE.PlaneGeometry(bannerWidth, bannerHeight);
@@ -2932,7 +2932,9 @@ const init = () => {
         context.fillText('Rubber Duck River Run', canvas.width / 2, canvas.height / 2);
 
         const textTexture = new THREE.CanvasTexture(canvas);
-        const textGeometry = new THREE.PlaneGeometry(14, 3); // Match logo banner width
+        const textBannerWidth = 16; // Wider to show full text
+        const textBannerHeight = 3;
+        const textGeometry = new THREE.PlaneGeometry(textBannerWidth, textBannerHeight);
         const textMaterial = new THREE.MeshStandardMaterial({
             map: textTexture,
             side: THREE.DoubleSide,
@@ -2942,18 +2944,18 @@ const init = () => {
 
         // Position text below the logo banner
         const textTopY = bannerTopY - bannerHeight - 0.5;
-        textBanner.position.set(0, textTopY - 1.5, bannerPos.z);
+        textBanner.position.set(0, textTopY - textBannerHeight / 2, bannerPos.z);
         textBanner.castShadow = true;
         textBanner.receiveShadow = true;
         scene.add(textBanner);
 
         // Add wires connecting text banner to logo banner above
         const textLeftWire = new THREE.Mesh(wireGeo, wireMat);
-        textLeftWire.position.set(-14 / 2 + 0.5, textTopY, bannerPos.z);
+        textLeftWire.position.set(-textBannerWidth / 2 + 0.5, textTopY, bannerPos.z);
         scene.add(textLeftWire);
 
         const textRightWire = new THREE.Mesh(wireGeo, wireMat);
-        textRightWire.position.set(14 / 2 - 0.5, textTopY, bannerPos.z);
+        textRightWire.position.set(textBannerWidth / 2 - 0.5, textTopY, bannerPos.z);
         scene.add(textRightWire);
 
         console.log(`✅ Starting line banner at ${bannerDistance}m - hanging from line across canyon`);
