@@ -2829,41 +2829,32 @@ const init = () => {
         });
     });
 
-    // 🏁 Create Starting Line Banner with Rotary Logo
+    // 🏁 Create Starting Line Banner with Rotary Logo - realistic hanging setup
     console.log('🏁 Creating starting line banner...');
     textureLoader.load('rotary_logo_2.png', (startingLogo) => {
         console.log('✅ Starting line banner logo loaded');
-
-        // Create poles for banner (two tall poles on each side)
-        const poleHeight = 35;
-        const poleRadius = 0.3;
-        const poleGeometry = new THREE.CylinderGeometry(poleRadius, poleRadius, poleHeight, 16);
-        const poleMaterial = new THREE.MeshStandardMaterial({
-            color: 0x4a4a4a,
-            roughness: 0.6,
-            metalness: 0.4
-        });
 
         // Get starting position - place banner at 50m (well ahead of player at 15m start)
         const bannerDistance = 50;
         const bannerT = splinePath.distanceToT(bannerDistance);
         const bannerPos = splinePath.getPointAt(bannerT);
 
-        // Left pole
-        const leftPole = new THREE.Mesh(poleGeometry, poleMaterial);
-        leftPole.position.set(-15, bannerPos.y + poleHeight / 2, bannerPos.z);
-        leftPole.castShadow = true;
-        scene.add(leftPole);
+        // Create thin line/rope spanning across canyon
+        const canyonWidth = 30; // Width of canyon
+        const lineHeight = bannerPos.y + 12; // Height to string the line
+        const lineGeometry = new THREE.CylinderGeometry(0.05, 0.05, canyonWidth, 8);
+        const lineMaterial = new THREE.MeshStandardMaterial({
+            color: 0x2a2a2a,
+            roughness: 0.8
+        });
+        const line = new THREE.Mesh(lineGeometry, lineMaterial);
+        line.position.set(0, lineHeight, bannerPos.z);
+        line.rotation.z = Math.PI / 2; // Rotate to horizontal
+        scene.add(line);
 
-        // Right pole
-        const rightPole = new THREE.Mesh(poleGeometry, poleMaterial);
-        rightPole.position.set(15, bannerPos.y + poleHeight / 2, bannerPos.z);
-        rightPole.castShadow = true;
-        scene.add(rightPole);
-
-        // Create banner spanning between poles
-        const bannerWidth = 32; // Spans between poles
-        const bannerHeight = 10;
+        // Create smaller banner hanging from CENTER of line
+        const bannerWidth = 16; // Smaller banner
+        const bannerHeight = 6;
         const bannerGeometry = new THREE.PlaneGeometry(bannerWidth, bannerHeight);
         const bannerMaterial = new THREE.MeshStandardMaterial({
             map: startingLogo,
@@ -2872,16 +2863,13 @@ const init = () => {
         });
         const startBanner = new THREE.Mesh(bannerGeometry, bannerMaterial);
 
-        // Position banner lower - hanging from poles at comfortable viewing height
-        startBanner.position.set(0, bannerPos.y + 8, bannerPos.z); // Lower height (8 units above water)
-        startBanner.rotation.x = Math.PI * 0.1; // Slight tilt for visibility
+        // Position banner hanging from center of line
+        startBanner.position.set(0, lineHeight - bannerHeight / 2 - 0.5, bannerPos.z); // Hanging down from line
         startBanner.castShadow = true;
         startBanner.receiveShadow = true;
         scene.add(startBanner);
 
-        console.log(`✅ Starting line banner positioned at ${bannerDistance}m (player starts at 15m)`);
-
-        console.log('✅ Starting line banner with logo created!');
+        console.log(`✅ Starting line banner at ${bannerDistance}m - hanging from line across canyon`);
     }, undefined, (error) => {
         console.warn('⚠️ Could not load starting banner logo:', error);
     });
@@ -3551,10 +3539,10 @@ const gameLoop = () => {
 
         // Old river segment code removed - using real 3D water now
 
-        // Spawn obstacles - 2.5% chance per frame (25% increase from 2%)
-        const spawnRate = 0.025;
+        // Spawn obstacles - 3% chance per frame (50% increase from 2%)
+        const spawnRate = 0.03;
         const activeDynamicObstacles = obstacles.filter(o => o.userData.type === 'log' || o.userData.type === 'rock').length;
-        if (Math.random() < spawnRate && activeDynamicObstacles < 18) { // Increased cap from 15 to 18
+        if (Math.random() < spawnRate && activeDynamicObstacles < 20) { // Increased cap to 20
             const spawnZ = camera.position.z - 80;
             const spawnDistance = Math.abs(spawnZ);
 
