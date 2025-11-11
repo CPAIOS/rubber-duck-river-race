@@ -2892,13 +2892,13 @@ const init = () => {
         // Position banner hanging from center of line
         const bannerTopY = lineHeight - 0.5;
 
-        // Position white background slightly behind logo
-        bannerBackground.position.set(0, bannerTopY - bannerHeight / 2, bannerPos.z + 0.01);
+        // Position white background slightly behind logo (lower Z = farther back)
+        bannerBackground.position.set(0, bannerTopY - bannerHeight / 2, bannerPos.z - 0.01);
         bannerBackground.castShadow = true;
         bannerBackground.receiveShadow = true;
         scene.add(bannerBackground);
 
-        // Position logo on top
+        // Position logo in front of white background
         startBanner.position.set(0, bannerTopY - bannerHeight / 2, bannerPos.z);
         startBanner.castShadow = true;
         startBanner.receiveShadow = true;
