@@ -1449,6 +1449,30 @@ const updateCompetitorDucks = (deltaTime) => {
         // Simple wave bobbing
         duck.position.y += Math.sin(Date.now() * 0.002 + duck.userData.raceNumber) * 0.1;
 
+        // 🪨💥 Competitor Duck Obstacle Collision Detection
+        obstacles.forEach(obstacle => {
+            const dist = Math.sqrt(
+                Math.pow(duck.position.x - obstacle.position.x, 2) +
+                Math.pow(duck.position.z - obstacle.position.z, 2)
+            );
+
+            if (dist < 2) { // Within collision range
+                if (obstacle.userData.type === 'rapids' || obstacle.userData.type === 'shader_rapids') {
+                    // Rapids damage (reduced)
+                    duck.userData.health -= Math.floor((obstacle.userData.damage || 15) * 0.3);
+                } else if (obstacle.userData.type === 'rock' || obstacle.userData.type === 'log') {
+                    // Rock/log damage
+                    duck.userData.health -= Math.floor((obstacle.userData.damage || 10) * 0.3);
+                }
+
+                // Check if duck died from obstacle
+                if (duck.userData.health <= 0) {
+                    console.log(`💀 Competitor duck #${duck.userData.raceNumber} eliminated by obstacle!`);
+                    duck.visible = false; // Duck is out!
+                }
+            }
+        });
+
         // Hide ducks that are very far behind (for performance) but KEEP them in array for position counting!
         if (duck.userData.distance < gameState.distance - 200) {
             if (duck.visible) {
