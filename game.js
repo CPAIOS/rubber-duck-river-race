@@ -1542,34 +1542,42 @@ const updateCompetitorDucks = (deltaTime) => {
 
         // 🪨💥 Competitor Duck Obstacle Collision Detection & Physics
         obstacles.forEach(obstacle => {
+            // Skip non-physical obstacles
+            if (!obstacle.userData || !obstacle.userData.type) return;
+
             const dist = Math.sqrt(
                 Math.pow(duck.position.x - obstacle.position.x, 2) +
                 Math.pow(duck.position.z - obstacle.position.z, 2)
             );
 
-            if (dist < 2) { // Within collision range
+            const COLLISION_RADIUS = 3.0; // Larger collision radius (was 2)
+
+            if (dist < COLLISION_RADIUS) { // Within collision range
                 if (obstacle.userData.type === 'rapids' || obstacle.userData.type === 'shader_rapids') {
                     // Rapids damage (reduced) but no bump back
                     duck.userData.health -= Math.floor((obstacle.userData.damage || 15) * 0.3);
                 } else if (obstacle.userData.type === 'rock' || obstacle.userData.type === 'log') {
                     // Check if duck jumped high enough to clear obstacle
-                    const isHighEnough = duck.userData.jumpHeight > 1.5;
+                    const isHighEnough = duck.userData.jumpHeight > 2.0; // Higher threshold
 
                     if (!isHighEnough) {
-                        // Rock/log collision - BUMP BACK!
+                        // Rock/log collision - STRONG BUMP BACK!
                         duck.userData.health -= Math.floor((obstacle.userData.damage || 10) * 0.3);
 
                         // Calculate bump direction (away from obstacle)
                         const bumpAngle = Math.atan2(duck.position.z - obstacle.position.z,
                                                        duck.position.x - obstacle.position.x);
-                        const bumpForce = (2 - dist) * 2; // Stronger bump when closer
+                        const bumpForce = (COLLISION_RADIUS - dist) * 3; // Much stronger bump
 
-                        // Bump duck sideways (X direction)
-                        duck.userData.xPosition += Math.cos(bumpAngle) * bumpForce;
+                        // Bump duck sideways (X direction) - more forceful
+                        duck.userData.xPosition += Math.cos(bumpAngle) * bumpForce * 1.5;
                         duck.userData.xPosition = Math.max(-8, Math.min(8, duck.userData.xPosition));
 
-                        // Bump backward in Z slightly
-                        duck.userData.distance -= bumpForce * 0.3; // Small backward bump
+                        // Bump backward in Z - MUCH stronger (was 0.3)
+                        duck.userData.distance -= bumpForce * 1.2; // Strong backward bump
+
+                        // Also reduce speed temporarily when hitting obstacle
+                        duck.userData.currentSpeed *= 0.8; // Lose 20% speed on collision
                     }
                 }
 
