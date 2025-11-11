@@ -1275,15 +1275,15 @@ const createCompetitorDuck = (color, raceNumber) => {
 
     if (skillRoll < 0.05) { // 5% Elite racers - THE REAL COMPETITION! (~7-8 ducks)
         aiSkill = 'elite';
-        baseSpeed = 0.75 + Math.random() * 0.05; // 0.75-0.80 speed (AT full throttle!)
+        baseSpeed = 0.65 + Math.random() * 0.10; // 0.65-0.75 speed (just below full throttle)
         aiType = 'aggressive'; // Will try to stay ahead
     } else if (skillRoll < 0.20) { // 15% Good racers (~22 ducks)
         aiSkill = 'good';
-        baseSpeed = 0.60 + Math.random() * 0.15; // 0.60-0.75 speed
+        baseSpeed = 0.55 + Math.random() * 0.10; // 0.55-0.65 speed
         aiType = 'competitive'; // Will speed up if behind
     } else { // 80% Average racers (~120 ducks)
         aiSkill = 'average';
-        baseSpeed = 0.35 + Math.random() * 0.25; // 0.35-0.60 speed
+        baseSpeed = 0.30 + Math.random() * 0.25; // 0.30-0.55 speed
         aiType = 'casual'; // Steady pace
     }
 
@@ -1326,10 +1326,12 @@ const spawnCompetitorDucks = () => {
     const startT = splinePath.distanceToT(0);
     const startPos = splinePath.getPointAt(startT);
 
-    // Spawn ducks in a grid formation
+    // Spawn ducks in a grid formation - PLAYER STARTS IN MIDDLE OF PACK
     const ducksPerRow = 15;
     const rowSpacing = 3;
     const duckSpacing = 1.8;
+    const totalRows = Math.ceil(NUM_COMPETITORS / ducksPerRow);
+    const middleRow = Math.floor(totalRows / 2);
 
     for (let i = 0; i < NUM_COMPETITORS; i++) {
         const row = Math.floor(i / ducksPerRow);
@@ -1343,17 +1345,18 @@ const spawnCompetitorDucks = () => {
 
         const competitorDuck = createCompetitorDuck(color, raceNumber);
 
-        // Position in grid - spread behind starting line
+        // Position in grid - spread AROUND player (half ahead, half behind)
         const xPos = (col - ducksPerRow / 2) * duckSpacing;
 
-        // Start all ducks at small positive distances (0-30m) so spline works correctly
+        // Place ducks both ahead and behind player
+        // Player is at distance 15 (middle), ducks from 0 to 30
         const distance = row * rowSpacing;
         const duckT = splinePath.distanceToT(distance);
         const duckPos = splinePath.getPointAt(duckT);
 
         competitorDuck.position.set(xPos, duckPos.y + 0.2, duckPos.z);
         competitorDuck.userData.xPosition = xPos;
-        competitorDuck.userData.distance = distance; // Positive distance values
+        competitorDuck.userData.distance = distance;
 
         scene.add(competitorDuck);
         competitorDucks.push(competitorDuck);
@@ -2675,8 +2678,10 @@ const init = () => {
         const rockT = splinePath.distanceToT(pos.distance);
         const rockPos = splinePath.getPointAt(rockT);
         const rock = createRock(pos.lane, rockPos.z);
-        // Place rocks at water level - they have internal Y offset of 5 units
+        // Place rocks at water level
         rock.position.y = rockPos.y;
+        // Store distance for continuous water level tracking
+        rock.userData.courseDistance = pos.distance;
         scene.add(rock);
         obstacles.push(rock);
     });
@@ -3002,13 +3007,13 @@ const startGame = () => {
 
     gameState.isPlaying = true;
     gameState.health = 100;
-    gameState.distance = 0;
+    gameState.distance = 15; // Start in MIDDLE of pack (ducks go from 0-30m)
     gameState.score = 0;
     gameState.speed = gameState.targetSpeed;
     gameState.duckPosition = 0;
-    gameState.splineT = 0; // Start at beginning of course
+    gameState.splineT = splinePath.distanceToT(15); // Start in middle of pack
     gameState.level = 1; // RESET level
-    gameState.position = 1; // Start in 1st place
+    gameState.position = 75; // Start in middle position (~75/151)
     gameState.duckVelocityY = 0; // RESET vertical velocity
     gameState.jumpHeight = 0; // RESET jump
     gameState.isJumping = false; // RESET jump state
@@ -3556,6 +3561,9 @@ const gameLoop = () => {
                     obstacle.position.y = spawnWaterLevel; // Set to water level
                 }
 
+                // Store course distance for accurate water level tracking
+                obstacle.userData.courseDistance = spawnDistance;
+
                 obstacles.push(obstacle);
                 scene.add(obstacle);
             }
@@ -3690,14 +3698,14 @@ const gameLoop = () => {
 
             // UPDATE LOG AND ROCK Y POSITIONS - directly set to water level
             if (obstacle.userData && (obstacle.userData.type === 'log' || obstacle.userData.type === 'rock')) {
-                // Find the closest point on the spline to this obstacle's Z position
-                // Use a more accurate distance calculation
-                const obstacleDistance = Math.max(0, obstacle.position.z);
-                const obstacleT = splinePath.distanceToT(obstacleDistance);
-                const waterLevel = splinePath.getPointAt(obstacleT).y;
+                // Use stored course distance for accurate water level tracking
+                if (obstacle.userData.courseDistance !== undefined) {
+                    const obstacleT = splinePath.distanceToT(obstacle.userData.courseDistance);
+                    const waterLevel = splinePath.getPointAt(obstacleT).y;
 
-                // Directly set Y to water level - rocks sit AT water level, logs float slightly above
-                obstacle.position.y = waterLevel + (obstacle.userData.type === 'log' ? 0.2 : 0.1);
+                    // Directly set Y to water level - rocks sit AT water level, logs float slightly above
+                    obstacle.position.y = waterLevel + (obstacle.userData.type === 'log' ? 0.2 : 0.1);
+                }
 
                 // Slow rotation in water for logs
                 if (obstacle.userData.type === 'log' && obstacle.userData.rotationSpeed) {
