@@ -200,14 +200,34 @@ const NUM_COMPETITORS = 150; // Number of competitor ducks
 const DUCK_COLORS = [
     0xFFD700, // Gold
     0xFF6B6B, // Red
+    0xFF1744, // Bright Red
+    0xF50057, // Hot Pink
+    0xD500F9, // Purple
+    0x651FFF, // Deep Purple
     0x4ECDC4, // Teal
+    0x00BCD4, // Cyan
+    0x00E5FF, // Light Cyan
     0x95E1D3, // Mint
+    0x69F0AE, // Light Green
+    0x00E676, // Emerald
+    0x76FF03, // Lime
     0xFFBE0B, // Yellow
+    0xFFEA00, // Bright Yellow
     0xFB5607, // Orange
+    0xFF6D00, // Bright Orange
     0xFF006E, // Pink
     0x8338EC, // Purple
+    0x7C4DFF, // Lavender
     0x3A86FF, // Blue
-    0x06FFA5  // Bright green
+    0x2979FF, // Bright Blue
+    0x00B0FF, // Sky Blue
+    0x06FFA5, // Bright green
+    0x1DE9B6, // Turquoise
+    0xFF9100, // Amber
+    0xFF3D00, // Deep Orange
+    0xE91E63, // Rose
+    0x9C27B0, // Magenta
+    0x18FFFF  // Aqua
 ];
 
 // 🏁 Finish line cutscene variables
@@ -3621,12 +3641,14 @@ const gameLoop = () => {
 
             // UPDATE LOG AND ROCK Y POSITIONS - directly set to water level
             if (obstacle.userData && (obstacle.userData.type === 'log' || obstacle.userData.type === 'rock')) {
-                const obstacleDistance = Math.abs(obstacle.position.z);
+                // Find the closest point on the spline to this obstacle's Z position
+                // Use a more accurate distance calculation
+                const obstacleDistance = Math.max(0, obstacle.position.z);
                 const obstacleT = splinePath.distanceToT(obstacleDistance);
                 const waterLevel = splinePath.getPointAt(obstacleT).y;
 
-                // Directly set Y to water level - no falling physics
-                obstacle.position.y = waterLevel + (obstacle.userData.type === 'log' ? 0.2 : 0);
+                // Directly set Y to water level - rocks sit AT water level, logs float slightly above
+                obstacle.position.y = waterLevel + (obstacle.userData.type === 'log' ? 0.2 : 0.1);
 
                 // Slow rotation in water for logs
                 if (obstacle.userData.type === 'log' && obstacle.userData.rotationSpeed) {
