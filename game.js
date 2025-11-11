@@ -2781,14 +2781,15 @@ const init = () => {
     console.log('🎨 Creating Rotary logo banners...');
     const textureLoader = new THREE.TextureLoader();
 
-    textureLoader.load('rotary_logo_2.png', (logoTexture) => {
+    textureLoader.load('rotary_3.png', (logoTexture) => {
         console.log('✅ Rotary logo texture loaded');
 
-        // Create banner material with logo
+        // Create banner material with logo and white background
         const bannerMaterial = new THREE.MeshStandardMaterial({
             map: logoTexture,
             side: THREE.DoubleSide,
-            transparent: true
+            transparent: false,
+            color: 0xffffff // White background for logo
         });
 
         // Banner positions along the course (distance, side: 'left'/'right')
@@ -2919,14 +2920,14 @@ const init = () => {
         // Add "Rubber Duck River Run" text below logo
         const canvas = document.createElement('canvas');
         const context = canvas.getContext('2d');
-        canvas.width = 512;
-        canvas.height = 128;
+        canvas.width = 1024;
+        canvas.height = 256;
 
         context.fillStyle = '#ffffff';
         context.fillRect(0, 0, canvas.width, canvas.height);
 
         context.fillStyle = '#000000';
-        context.font = 'bold 48px Arial';
+        context.font = 'bold 56px Arial';
         context.textAlign = 'center';
         context.textBaseline = 'middle';
         context.fillText('Rubber Duck River Run', canvas.width / 2, canvas.height / 2);
