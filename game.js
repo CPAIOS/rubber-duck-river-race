@@ -2355,7 +2355,7 @@ const initMobileControls = () => {
             e.preventDefault();
             if (!gameState.isJumping && gameState.jumpHeight === 0) {
                 gameState.isJumping = true;
-                gameState.duckVelocityY = 0.25; // Jump strength
+                gameState.jumpVelocity = 0.4; // Jump strength - matches keyboard jump
             }
         });
         jumpBtn.addEventListener('touchend', (e) => {
