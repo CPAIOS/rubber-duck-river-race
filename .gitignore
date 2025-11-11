@@ -13,4 +13,10 @@
 
 # Temporary files
 *.tmp
+
+# Unused model files (keep only Rubber_Ducky_1111020056_texture.glb and Golden eagle.glb)
 Fighting_Falcon*.glb
+Eagle.glb
+Rubber Duck.glb
+test.glb
+test_model.glb
