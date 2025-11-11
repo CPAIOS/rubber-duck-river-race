@@ -1031,14 +1031,14 @@ const addNumberBadgeToDuck = (duckGroup, number) => {
     const flagAssembly = new THREE.Group();
     flagAssembly.name = 'flagAssembly';
 
-    // Create flagpole (thin cylinder)
-    const poleHeight = 1.8;
-    const poleRadius = 0.04;
-    const poleGeometry = new THREE.CylinderGeometry(poleRadius, poleRadius, poleHeight, 8);
+    // Create flagpole (thin wire-like cylinder)
+    const poleHeight = 2.0;
+    const poleRadius = 0.012; // Very thin wire!
+    const poleGeometry = new THREE.CylinderGeometry(poleRadius, poleRadius, poleHeight, 6);
     const poleMaterial = new THREE.MeshStandardMaterial({
-        color: 0x3a2515, // Dark brown
-        roughness: 0.8,
-        metalness: 0.2
+        color: 0xC0C0C0, // Metallic silver
+        roughness: 0.3,
+        metalness: 0.9
     });
     const pole = new THREE.Mesh(poleGeometry, poleMaterial);
     pole.position.y = poleHeight / 2; // Bottom at y=0, top at poleHeight
@@ -1050,16 +1050,16 @@ const addNumberBadgeToDuck = (duckGroup, number) => {
     canvas.height = 180;
     const ctx = canvas.getContext('2d');
 
-    // Draw flag background (white with black border)
+    // Draw flag background (white with thin black border)
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0, 0, 256, 180);
     ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 8;
-    ctx.strokeRect(4, 4, 248, 172);
+    ctx.lineWidth = 3; // Thinner border
+    ctx.strokeRect(2, 2, 252, 176);
 
-    // Draw number on flag
+    // Draw number on flag (thinner font)
     ctx.fillStyle = '#000000';
-    ctx.font = 'bold 100px Arial';
+    ctx.font = '80px Arial'; // Thinner, not bold
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(number.toString(), 128, 90);
@@ -1073,20 +1073,19 @@ const addNumberBadgeToDuck = (duckGroup, number) => {
     });
 
     // Create flag (rectangular, sticks out horizontally)
-    const flagWidth = 1.0;
-    const flagHeight = 0.7;
+    const flagWidth = 0.8;
+    const flagHeight = 0.6;
     const flagGeometry = new THREE.PlaneGeometry(flagWidth, flagHeight);
     const flag = new THREE.Mesh(flagGeometry, flagMaterial);
 
-    // Position flag at top of pole - LEFT EDGE attached to pole!
-    // PlaneGeometry is centered, so offset by flagWidth/2 to attach left edge to pole
-    flag.position.set(0, poleHeight - flagHeight / 2, flagWidth / 2); // Z offset for flag extending forward
-    flag.rotation.y = Math.PI / 2; // Rotate so flag faces sideways (perpendicular to pole)
+    // Position flag at top of pole - attached to pole and sticking out
+    flag.position.set(flagWidth / 2, poleHeight - flagHeight / 2, 0); // Offset so left edge touches pole
+    flag.rotation.y = 0; // Face forward/backward (parallel to duck direction)
     flagAssembly.add(flag);
 
-    // Position flag assembly on duck's back
-    flagAssembly.position.set(-0.2, 0.6, -0.3); // Left side of duck, higher up, slightly back
-    flagAssembly.rotation.y = -Math.PI / 6; // Angle flag assembly slightly for better visibility
+    // Position flag assembly coming from duck's BACK (tail area)
+    flagAssembly.position.set(0, 0.2, 0.8); // Center, low on body, behind duck
+    flagAssembly.rotation.y = 0; // No rotation - flag extends straight to the side
     duckModel.add(flagAssembly);
 
     console.log(`🚩 Added race flag #${number} on pole to duck`);
