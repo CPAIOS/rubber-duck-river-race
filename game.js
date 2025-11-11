@@ -194,6 +194,22 @@ let duckIsFalling = false; // Track if duck is in dramatic fall
 let duckFallVelocity = 0; // Vertical fall velocity
 let duckFallStartY = 0; // Y position where fall started
 
+// 🦆🦆🦆 Competitor Ducks System
+let competitorDucks = []; // Array of all competitor ducks
+const NUM_COMPETITORS = 150; // Number of competitor ducks
+const DUCK_COLORS = [
+    0xFFD700, // Gold
+    0xFF6B6B, // Red
+    0x4ECDC4, // Teal
+    0x95E1D3, // Mint
+    0xFFBE0B, // Yellow
+    0xFB5607, // Orange
+    0xFF006E, // Pink
+    0x8338EC, // Purple
+    0x3A86FF, // Blue
+    0x06FFA5  // Bright green
+];
+
 // 🏁 Finish line cutscene variables
 let finishLineCutsceneActive = false;
 let finishLineCutsceneStartTime = 0;
@@ -999,49 +1015,81 @@ loader.load('Rubber_Ducky_1111020056_texture.glb', (gltf) => {
     console.error('❌ Error loading new duck model:', error);
 });
 
-// Add race number badge to duck
+// Add race number flag on pole to duck
 const addNumberBadgeToDuck = (duckGroup, number) => {
     // Find the duck model in the group
     const duckModel = duckGroup.children[0];
     if (!duckModel) return;
 
-    // Remove old badge if exists
-    const oldBadge = duckModel.getObjectByName('numberBadge');
-    if (oldBadge) {
-        duckModel.remove(oldBadge);
+    // Remove old flag assembly if exists
+    const oldFlag = duckModel.getObjectByName('flagAssembly');
+    if (oldFlag) {
+        duckModel.remove(oldFlag);
     }
 
-    // Create canvas with number
+    // Create group for flag and pole
+    const flagAssembly = new THREE.Group();
+    flagAssembly.name = 'flagAssembly';
+
+    // Create flagpole (thin cylinder)
+    const poleHeight = 1.8;
+    const poleRadius = 0.04;
+    const poleGeometry = new THREE.CylinderGeometry(poleRadius, poleRadius, poleHeight, 8);
+    const poleMaterial = new THREE.MeshStandardMaterial({
+        color: 0x3a2515, // Dark brown
+        roughness: 0.8,
+        metalness: 0.2
+    });
+    const pole = new THREE.Mesh(poleGeometry, poleMaterial);
+    pole.position.y = poleHeight / 2; // Bottom at y=0, top at poleHeight
+    flagAssembly.add(pole);
+
+    // Create canvas with number for flag
     const canvas = document.createElement('canvas');
     canvas.width = 256;
-    canvas.height = 256;
+    canvas.height = 180;
     const ctx = canvas.getContext('2d');
 
-    // Draw number on canvas
-    ctx.fillStyle = '#000000';
-    ctx.fillRect(0, 0, 256, 256);
+    // Draw flag background (white with black border)
     ctx.fillStyle = '#FFFFFF';
-    ctx.font = 'bold 120px Arial';
+    ctx.fillRect(0, 0, 256, 180);
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 8;
+    ctx.strokeRect(4, 4, 248, 172);
+
+    // Draw number on flag
+    ctx.fillStyle = '#000000';
+    ctx.font = 'bold 100px Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(number.toString(), 128, 128);
+    ctx.fillText(number.toString(), 128, 90);
 
     // Create texture from canvas
-    const numberTexture = new THREE.CanvasTexture(canvas);
-    const numberMaterial = new THREE.MeshBasicMaterial({
-        map: numberTexture,
+    const flagTexture = new THREE.CanvasTexture(canvas);
+    const flagMaterial = new THREE.MeshBasicMaterial({
+        map: flagTexture,
+        side: THREE.DoubleSide,
         transparent: false
     });
 
-    // Create number badge (flat rectangle)
-    const badgeGeometry = new THREE.PlaneGeometry(0.8, 0.8);
-    const numberBadge = new THREE.Mesh(badgeGeometry, numberMaterial);
-    numberBadge.name = 'numberBadge';
-    numberBadge.position.set(0, 1.2, 0.8); // On duck's back/side
-    numberBadge.rotation.y = Math.PI; // Face backward so camera can see it
-    duckModel.add(numberBadge);
+    // Create flag (rectangular, sticks out horizontally)
+    const flagWidth = 1.0;
+    const flagHeight = 0.7;
+    const flagGeometry = new THREE.PlaneGeometry(flagWidth, flagHeight);
+    const flag = new THREE.Mesh(flagGeometry, flagMaterial);
 
-    console.log(`🔢 Added race number #${number} to duck`);
+    // Position flag at top of pole - LEFT EDGE attached to pole!
+    // PlaneGeometry is centered, so offset by flagWidth/2 to attach left edge to pole
+    flag.position.set(0, poleHeight - flagHeight / 2, flagWidth / 2); // Z offset for flag extending forward
+    flag.rotation.y = Math.PI / 2; // Rotate so flag faces sideways (perpendicular to pole)
+    flagAssembly.add(flag);
+
+    // Position flag assembly on duck's back
+    flagAssembly.position.set(-0.2, 0.6, -0.3); // Left side of duck, higher up, slightly back
+    flagAssembly.rotation.y = -Math.PI / 6; // Angle flag assembly slightly for better visibility
+    duckModel.add(flagAssembly);
+
+    console.log(`🚩 Added race flag #${number} on pole to duck`);
 };
 
 // Create rubber duck
@@ -1116,6 +1164,174 @@ const createDuck = () => {
     duckGroup.rotation.y = 0; // No rotation
 
     return duckGroup;
+};
+
+// 🦆🦆🦆 Create Competitor Duck (simplified version for performance)
+const createCompetitorDuck = (color, raceNumber) => {
+    const duckGroup = new THREE.Group();
+
+    // Use simplified geometry for competitors (for performance with 100+ ducks)
+    const bodyGeometry = new THREE.SphereGeometry(0.6, 8, 8);
+    bodyGeometry.scale(1, 0.8, 1.2);
+    const bodyMaterial = new THREE.MeshStandardMaterial({
+        color: color,
+        roughness: 0.3,
+        metalness: 0.1
+    });
+    const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+    body.position.y = 0.5;
+    body.castShadow = true;
+    duckGroup.add(body);
+
+    // Simple head
+    const headGeometry = new THREE.SphereGeometry(0.35, 8, 8);
+    const head = new THREE.Mesh(headGeometry, bodyMaterial);
+    head.position.set(0, 1.2, -0.4);
+    duckGroup.add(head);
+
+    // Simple beak
+    const beakGeometry = new THREE.ConeGeometry(0.15, 0.35, 6);
+    const beakMaterial = new THREE.MeshStandardMaterial({ color: 0xFF8800 });
+    const beak = new THREE.Mesh(beakGeometry, beakMaterial);
+    beak.rotation.x = Math.PI / 2;
+    beak.position.set(0, 1.1, -0.8);
+    duckGroup.add(beak);
+
+    // Store metadata
+    duckGroup.userData = {
+        isCompetitor: true,
+        raceNumber: raceNumber,
+        color: color,
+        xPosition: 0, // X position relative to path (-8 to 8)
+        speed: 0.8 + Math.random() * 0.4, // Random speed 0.8-1.2x base speed
+        distance: 0, // Distance along course
+        health: 100
+    };
+
+    return duckGroup;
+};
+
+// 🦆🦆🦆 Spawn all competitor ducks at starting line
+const spawnCompetitorDucks = () => {
+    console.log(`🦆🦆🦆 Spawning ${NUM_COMPETITORS} competitor ducks...`);
+
+    // Clear any existing competitor ducks
+    competitorDucks.forEach(duck => {
+        if (duck && duck.parent) {
+            scene.remove(duck);
+        }
+    });
+    competitorDucks = [];
+
+    // Get starting position
+    const startT = splinePath.distanceToT(0);
+    const startPos = splinePath.getPointAt(startT);
+
+    // Spawn ducks in a grid formation
+    const ducksPerRow = 15;
+    const rowSpacing = 3;
+    const duckSpacing = 1.8;
+
+    for (let i = 0; i < NUM_COMPETITORS; i++) {
+        const row = Math.floor(i / ducksPerRow);
+        const col = i % ducksPerRow;
+
+        // Random color
+        const color = DUCK_COLORS[Math.floor(Math.random() * DUCK_COLORS.length)];
+
+        // Random race number
+        const raceNumber = Math.floor(Math.random() * 9999) + 1;
+
+        const competitorDuck = createCompetitorDuck(color, raceNumber);
+
+        // Position in grid
+        const xPos = (col - ducksPerRow / 2) * duckSpacing;
+        const zPos = startPos.z + 10 + (row * rowSpacing); // Behind starting line
+
+        competitorDuck.position.set(xPos, startPos.y + 0.2, zPos);
+        competitorDuck.userData.xPosition = xPos;
+        competitorDuck.userData.distance = -10 - (row * rowSpacing); // Negative = behind start
+
+        scene.add(competitorDuck);
+        competitorDucks.push(competitorDuck);
+    }
+
+    console.log(`✅ Spawned ${competitorDucks.length} competitor ducks!`);
+};
+
+// 🦆🦆🦆 Update all competitor ducks (called every frame)
+const updateCompetitorDucks = (deltaTime) => {
+    competitorDucks.forEach(duck => {
+        if (!duck.userData) return;
+
+        // Move duck forward
+        duck.userData.distance += duck.userData.speed * gameState.speed * deltaTime * 10;
+
+        // Random slight left/right movement
+        duck.userData.xPosition += (Math.random() - 0.5) * 0.03;
+        duck.userData.xPosition = Math.max(-8, Math.min(8, duck.userData.xPosition)); // Keep in bounds
+
+        // Get position along spline
+        const t = splinePath.distanceToT(duck.userData.distance);
+        const pathPos = splinePath.getPointAt(t);
+
+        // Update position
+        duck.position.x = duck.userData.xPosition;
+        duck.position.y = pathPos.y + 0.2;
+        duck.position.z = pathPos.z;
+
+        // Simple wave bobbing
+        duck.position.y += Math.sin(Date.now() * 0.002 + duck.userData.raceNumber) * 0.1;
+
+        // Remove ducks that are too far behind player
+        if (duck.userData.distance < gameState.distance - 100) {
+            scene.remove(duck);
+            competitorDucks = competitorDucks.filter(d => d !== duck);
+        }
+    });
+
+    // 🦆💥 Duck-to-Duck Collision Detection & Bumping
+    const COLLISION_RADIUS = 1.2; // Distance at which ducks collide
+    for (let i = 0; i < competitorDucks.length; i++) {
+        const duck1 = competitorDucks[i];
+        if (!duck1.userData) continue;
+
+        // Check collision with player duck
+        const distToPlayer = Math.sqrt(
+            Math.pow(duck1.position.x - duck.position.x, 2) +
+            Math.pow(duck1.position.z - duck.position.z, 2)
+        );
+        if (distToPlayer < COLLISION_RADIUS) {
+            // Bump competitor duck away from player
+            const angle = Math.atan2(duck1.position.z - duck.position.z, duck1.position.x - duck.position.x);
+            duck1.userData.xPosition += Math.cos(angle) * 0.15;
+            duck1.userData.xPosition = Math.max(-8, Math.min(8, duck1.userData.xPosition));
+        }
+
+        // Check collision with other competitor ducks (only check nearby ducks for performance)
+        for (let j = i + 1; j < Math.min(i + 20, competitorDucks.length); j++) {
+            const duck2 = competitorDucks[j];
+            if (!duck2.userData) continue;
+
+            const dist = Math.sqrt(
+                Math.pow(duck1.position.x - duck2.position.x, 2) +
+                Math.pow(duck1.position.z - duck2.position.z, 2)
+            );
+
+            if (dist < COLLISION_RADIUS) {
+                // Ducks collide! Push them apart
+                const angle = Math.atan2(duck1.position.z - duck2.position.z, duck1.position.x - duck2.position.x);
+                const pushForce = (COLLISION_RADIUS - dist) * 0.1;
+
+                duck1.userData.xPosition += Math.cos(angle) * pushForce;
+                duck2.userData.xPosition -= Math.cos(angle) * pushForce;
+
+                // Keep in bounds
+                duck1.userData.xPosition = Math.max(-8, Math.min(8, duck1.userData.xPosition));
+                duck2.userData.xPosition = Math.max(-8, Math.min(8, duck2.userData.xPosition));
+            }
+        }
+    }
 };
 
 // Create river surface
@@ -2224,6 +2440,128 @@ const init = () => {
         console.error('Error loading eagle model:', error);
     });
 
+    // 🎨 Create 3D Rotary Logo Banners on canyon walls
+    console.log('🎨 Creating Rotary logo banners...');
+    const textureLoader = new THREE.TextureLoader();
+
+    textureLoader.load('rotary_logo_2.png', (logoTexture) => {
+        console.log('✅ Rotary logo texture loaded');
+
+        // Create banner material with logo
+        const bannerMaterial = new THREE.MeshStandardMaterial({
+            map: logoTexture,
+            side: THREE.DoubleSide,
+            transparent: true
+        });
+
+        // Banner positions along the course (distance, side: 'left'/'right')
+        const bannerPositions = [
+            { distance: 100, side: 'left' },
+            { distance: 250, side: 'right' },
+            { distance: 500, side: 'left' },
+            { distance: 700, side: 'right' },
+            { distance: 900, side: 'left' },
+            { distance: 1200, side: 'right' },
+            { distance: 1400, side: 'left' }
+        ];
+
+        bannerPositions.forEach(pos => {
+            // Get position along spline
+            const t = splinePath.distanceToT(pos.distance);
+            const pathPos = splinePath.getPointAt(t);
+
+            // Create banner (rectangular flag)
+            const bannerWidth = 12;
+            const bannerHeight = 8;
+            const bannerGeometry = new THREE.PlaneGeometry(bannerWidth, bannerHeight);
+            const banner = new THREE.Mesh(bannerGeometry, bannerMaterial.clone());
+
+            // Position on canyon wall
+            const wallOffset = pos.side === 'left' ? -20 : 20;
+            banner.position.set(
+                wallOffset,
+                pathPos.y + 25, // 25 units above water level
+                pathPos.z
+            );
+
+            // Rotate to face inward toward river
+            banner.rotation.y = pos.side === 'left' ? Math.PI / 4 : -Math.PI / 4;
+
+            banner.castShadow = true;
+            banner.receiveShadow = true;
+
+            scene.add(banner);
+            console.log(`🎨 Banner placed at ${pos.distance}m on ${pos.side} wall`);
+        });
+
+        console.log(`✅ ${bannerPositions.length} Rotary logo banners added to canyon walls!`);
+    }, undefined, (error) => {
+        console.warn('⚠️ Could not load Rotary logo texture:', error);
+        console.log('Trying fallback logo: rotary_logo.jpg');
+
+        // Try fallback logo
+        textureLoader.load('rotary_logo.jpg', (logoTexture) => {
+            console.log('✅ Fallback Rotary logo loaded');
+            // Same banner creation code would go here with fallback texture
+        }, undefined, (error2) => {
+            console.warn('⚠️ Could not load fallback logo either:', error2);
+        });
+    });
+
+    // 🏁 Create Starting Line Banner with Rotary Logo
+    console.log('🏁 Creating starting line banner...');
+    textureLoader.load('rotary_logo_2.png', (startingLogo) => {
+        console.log('✅ Starting line banner logo loaded');
+
+        // Create poles for banner (two tall poles on each side)
+        const poleHeight = 35;
+        const poleRadius = 0.3;
+        const poleGeometry = new THREE.CylinderGeometry(poleRadius, poleRadius, poleHeight, 16);
+        const poleMaterial = new THREE.MeshStandardMaterial({
+            color: 0x4a4a4a,
+            roughness: 0.6,
+            metalness: 0.4
+        });
+
+        // Get starting position (at distance 0)
+        const startT = splinePath.distanceToT(0);
+        const startPos = splinePath.getPointAt(startT);
+
+        // Left pole
+        const leftPole = new THREE.Mesh(poleGeometry, poleMaterial);
+        leftPole.position.set(-15, startPos.y + poleHeight / 2, startPos.z - 5);
+        leftPole.castShadow = true;
+        scene.add(leftPole);
+
+        // Right pole
+        const rightPole = new THREE.Mesh(poleGeometry, poleMaterial);
+        rightPole.position.set(15, startPos.y + poleHeight / 2, startPos.z - 5);
+        rightPole.castShadow = true;
+        scene.add(rightPole);
+
+        // Create banner spanning between poles
+        const bannerWidth = 32; // Spans between poles
+        const bannerHeight = 10;
+        const bannerGeometry = new THREE.PlaneGeometry(bannerWidth, bannerHeight);
+        const bannerMaterial = new THREE.MeshStandardMaterial({
+            map: startingLogo,
+            side: THREE.DoubleSide,
+            transparent: true
+        });
+        const startBanner = new THREE.Mesh(bannerGeometry, bannerMaterial);
+
+        // Position banner at top of poles, spanning across
+        startBanner.position.set(0, startPos.y + poleHeight - 2, startPos.z - 5);
+        startBanner.rotation.x = Math.PI * 0.1; // Slight tilt for visibility
+        startBanner.castShadow = true;
+        startBanner.receiveShadow = true;
+        scene.add(startBanner);
+
+        console.log('✅ Starting line banner with logo created!');
+    }, undefined, (error) => {
+        console.warn('⚠️ Could not load starting banner logo:', error);
+    });
+
     // DISABLED: Old flat water
     // createRealWater();
 
@@ -2437,6 +2775,9 @@ const startGame = () => {
         addNumberBadgeToDuck(duck, gameState.duckNumber);
     }
 
+    // 🦆🦆🦆 Spawn competitor ducks!
+    spawnCompetitorDucks();
+
     // Clear existing obstacles
     obstacles.forEach(obstacle => scene.remove(obstacle));
     obstacles.length = 0;
@@ -2529,6 +2870,9 @@ const gameLoop = () => {
 
         // Update wave time
         gameState.waveTime += 0.02;
+
+        // 🦆🦆🦆 Update all competitor ducks
+        updateCompetitorDucks(0.016); // Assuming ~60fps = 16ms
 
         // ===== DETERMINE CURRENT WATER LEVEL (from spline elevation) =====
         // Get the current ground/water level from the spline path
