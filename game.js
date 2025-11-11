@@ -2860,8 +2860,8 @@ const init = () => {
         line.rotation.z = Math.PI / 2; // Rotate to horizontal
         scene.add(line);
 
-        // Create narrower banner hanging from CENTER of line
-        const bannerWidth = 10; // Narrower to avoid stretching
+        // Create banner hanging from CENTER of line (wider so text isn't cut off)
+        const bannerWidth = 14; // Wider to show full logo
         const bannerHeight = 5;
         const bannerGeometry = new THREE.PlaneGeometry(bannerWidth, bannerHeight);
         const bannerMaterial = new THREE.MeshStandardMaterial({
@@ -2872,10 +2872,23 @@ const init = () => {
         const startBanner = new THREE.Mesh(bannerGeometry, bannerMaterial);
 
         // Position banner hanging from center of line
-        startBanner.position.set(0, lineHeight - bannerHeight / 2 - 0.5, bannerPos.z); // Hanging down from line
+        const bannerTopY = lineHeight - 0.5;
+        startBanner.position.set(0, bannerTopY - bannerHeight / 2, bannerPos.z);
         startBanner.castShadow = true;
         startBanner.receiveShadow = true;
         scene.add(startBanner);
+
+        // Add wires connecting banner to line (left and right corners)
+        const wireGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.5, 4);
+        const wireMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a });
+
+        const leftWire = new THREE.Mesh(wireGeo, wireMat);
+        leftWire.position.set(-bannerWidth / 2 + 0.5, bannerTopY, bannerPos.z);
+        scene.add(leftWire);
+
+        const rightWire = new THREE.Mesh(wireGeo, wireMat);
+        rightWire.position.set(bannerWidth / 2 - 0.5, bannerTopY, bannerPos.z);
+        scene.add(rightWire);
 
         // Add "Rubber Duck River Run" text below logo
         const canvas = document.createElement('canvas');
@@ -2893,7 +2906,7 @@ const init = () => {
         context.fillText('Rubber Duck River Run', canvas.width / 2, canvas.height / 2);
 
         const textTexture = new THREE.CanvasTexture(canvas);
-        const textGeometry = new THREE.PlaneGeometry(12, 3);
+        const textGeometry = new THREE.PlaneGeometry(14, 3); // Match logo banner width
         const textMaterial = new THREE.MeshStandardMaterial({
             map: textTexture,
             side: THREE.DoubleSide,
@@ -2902,10 +2915,20 @@ const init = () => {
         const textBanner = new THREE.Mesh(textGeometry, textMaterial);
 
         // Position text below the logo banner
-        textBanner.position.set(0, lineHeight - bannerHeight - 2.5, bannerPos.z);
+        const textTopY = bannerTopY - bannerHeight - 0.5;
+        textBanner.position.set(0, textTopY - 1.5, bannerPos.z);
         textBanner.castShadow = true;
         textBanner.receiveShadow = true;
         scene.add(textBanner);
+
+        // Add wires connecting text banner to logo banner above
+        const textLeftWire = new THREE.Mesh(wireGeo, wireMat);
+        textLeftWire.position.set(-14 / 2 + 0.5, textTopY, bannerPos.z);
+        scene.add(textLeftWire);
+
+        const textRightWire = new THREE.Mesh(wireGeo, wireMat);
+        textRightWire.position.set(14 / 2 - 0.5, textTopY, bannerPos.z);
+        scene.add(textRightWire);
 
         console.log(`✅ Starting line banner at ${bannerDistance}m - hanging from line across canyon`);
     }, undefined, (error) => {
