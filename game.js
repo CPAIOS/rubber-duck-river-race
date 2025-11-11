@@ -1275,15 +1275,15 @@ const createCompetitorDuck = (color, raceNumber) => {
 
     if (skillRoll < 0.05) { // 5% Elite racers - THE REAL COMPETITION! (~7-8 ducks)
         aiSkill = 'elite';
-        baseSpeed = 0.55 + Math.random() * 0.08; // 0.55-0.63 speed (beatable at full throttle)
+        baseSpeed = 0.60 + Math.random() * 0.08; // 0.60-0.68 speed (challenging but beatable)
         aiType = 'aggressive'; // Will try to stay ahead
     } else if (skillRoll < 0.20) { // 15% Good racers (~22 ducks)
         aiSkill = 'good';
-        baseSpeed = 0.45 + Math.random() * 0.10; // 0.45-0.55 speed
+        baseSpeed = 0.50 + Math.random() * 0.10; // 0.50-0.60 speed
         aiType = 'competitive'; // Will speed up if behind
     } else { // 80% Average racers (~120 ducks)
         aiSkill = 'average';
-        baseSpeed = 0.25 + Math.random() * 0.20; // 0.25-0.45 speed
+        baseSpeed = 0.28 + Math.random() * 0.22; // 0.28-0.50 speed
         aiType = 'casual'; // Steady pace
     }
 
