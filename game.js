@@ -1169,8 +1169,8 @@ const createDuck = () => {
 const createCompetitorDuck = (color, raceNumber) => {
     const duckGroup = new THREE.Group();
 
-    // Use simplified geometry for competitors (for performance with 100+ ducks)
-    const bodyGeometry = new THREE.SphereGeometry(0.6, 8, 8);
+    // Use simplified geometry for competitors - SCALED TO MATCH PLAYER DUCK
+    const bodyGeometry = new THREE.SphereGeometry(0.8, 8, 8); // Increased from 0.6 to 0.8
     bodyGeometry.scale(1, 0.8, 1.2);
     const bodyMaterial = new THREE.MeshStandardMaterial({
         color: color,
@@ -1178,31 +1178,37 @@ const createCompetitorDuck = (color, raceNumber) => {
         metalness: 0.1
     });
     const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-    body.position.y = 0.5;
+    body.position.y = 0.6; // Raised from 0.5
     body.castShadow = true;
     duckGroup.add(body);
 
-    // Simple head
-    const headGeometry = new THREE.SphereGeometry(0.35, 8, 8);
+    // Simple head - scaled up
+    const headGeometry = new THREE.SphereGeometry(0.45, 8, 8); // Increased from 0.35
     const head = new THREE.Mesh(headGeometry, bodyMaterial);
-    head.position.set(0, 1.2, -0.4);
+    head.position.set(0, 1.5, -0.5); // Raised and adjusted
     duckGroup.add(head);
 
-    // Simple beak
-    const beakGeometry = new THREE.ConeGeometry(0.15, 0.35, 6);
+    // Simple beak - scaled up
+    const beakGeometry = new THREE.ConeGeometry(0.2, 0.45, 6); // Increased from 0.15, 0.35
     const beakMaterial = new THREE.MeshStandardMaterial({ color: 0xFF8800 });
     const beak = new THREE.Mesh(beakGeometry, beakMaterial);
     beak.rotation.x = Math.PI / 2;
-    beak.position.set(0, 1.1, -0.8);
+    beak.position.set(0, 1.4, -1.0); // Adjusted to match new scale
     duckGroup.add(beak);
 
-    // Store metadata
+    // Overall scale to match player duck size
+    duckGroup.scale.set(1.2, 1.2, 1.2);
+
+    // Store metadata - AI pilot attributes
     duckGroup.userData = {
         isCompetitor: true,
         raceNumber: raceNumber,
         color: color,
         xPosition: 0, // X position relative to path (-8 to 8)
-        speed: 0.8 + Math.random() * 0.4, // Random speed 0.8-1.2x base speed
+        baseSpeed: 0.5 + Math.random() * 0.3, // Independent speed 0.5-0.8
+        targetSpeed: 0.5 + Math.random() * 0.3, // Target speed for variation
+        steerDirection: 0, // -1 left, 0 center, 1 right
+        steerCooldown: 0, // Frames until next steer decision
         distance: 0, // Distance along course
         health: 100
     };
@@ -1267,12 +1273,40 @@ const updateCompetitorDucks = (deltaTime) => {
     competitorDucks.forEach(duck => {
         if (!duck.userData) return;
 
-        // Move duck forward
-        duck.userData.distance += duck.userData.speed * gameState.speed * deltaTime * 10;
+        // 🤖 AI PILOT - Independent movement for each duck
+        // Move duck forward at its own speed
+        duck.userData.distance += duck.userData.baseSpeed * deltaTime * 60; // 60 = speed multiplier
 
-        // Random slight left/right movement
-        duck.userData.xPosition += (Math.random() - 0.5) * 0.03;
-        duck.userData.xPosition = Math.max(-8, Math.min(8, duck.userData.xPosition)); // Keep in bounds
+        // AI Steering logic
+        if (duck.userData.steerCooldown <= 0) {
+            // Make a new steering decision every 30-90 frames
+            duck.userData.steerCooldown = 30 + Math.floor(Math.random() * 60);
+
+            // Random steering: 40% left, 40% right, 20% center
+            const rand = Math.random();
+            if (rand < 0.4) {
+                duck.userData.steerDirection = -1; // Steer left
+            } else if (rand < 0.8) {
+                duck.userData.steerDirection = 1; // Steer right
+            } else {
+                duck.userData.steerDirection = 0; // Go straight
+            }
+        }
+        duck.userData.steerCooldown--;
+
+        // Apply steering
+        if (duck.userData.steerDirection !== 0) {
+            duck.userData.xPosition += duck.userData.steerDirection * 0.08;
+        }
+
+        // Avoid walls - steer away from edges
+        if (duck.userData.xPosition < -7) {
+            duck.userData.xPosition += 0.15; // Push away from left wall
+        } else if (duck.userData.xPosition > 7) {
+            duck.userData.xPosition -= 0.15; // Push away from right wall
+        }
+
+        duck.userData.xPosition = Math.max(-8, Math.min(8, duck.userData.xPosition)); // Hard limit
 
         // Get position along spline
         const t = splinePath.distanceToT(duck.userData.distance);
