@@ -2872,8 +2872,8 @@ const init = () => {
         });
         const startBanner = new THREE.Mesh(bannerGeometry, bannerMaterial);
 
-        // Position banner at top of poles, spanning across
-        startBanner.position.set(0, bannerPos.y + poleHeight - 2, bannerPos.z);
+        // Position banner lower - hanging from poles at comfortable viewing height
+        startBanner.position.set(0, bannerPos.y + 8, bannerPos.z); // Lower height (8 units above water)
         startBanner.rotation.x = Math.PI * 0.1; // Slight tilt for visibility
         startBanner.castShadow = true;
         startBanner.receiveShadow = true;
@@ -3551,10 +3551,10 @@ const gameLoop = () => {
 
         // Old river segment code removed - using real 3D water now
 
-        // Spawn obstacles - 2% chance per frame (logs and rocks)
-        const spawnRate = 0.02;
+        // Spawn obstacles - 2.5% chance per frame (25% increase from 2%)
+        const spawnRate = 0.025;
         const activeDynamicObstacles = obstacles.filter(o => o.userData.type === 'log' || o.userData.type === 'rock').length;
-        if (Math.random() < spawnRate && activeDynamicObstacles < 15) {
+        if (Math.random() < spawnRate && activeDynamicObstacles < 18) { // Increased cap from 15 to 18
             const spawnZ = camera.position.z - 80;
             const spawnDistance = Math.abs(spawnZ);
 
@@ -3730,7 +3730,7 @@ const gameLoop = () => {
 
             // UPDATE LOG AND ROCK Y POSITIONS - directly set to water level
             if (obstacle.userData && (obstacle.userData.type === 'log' || obstacle.userData.type === 'rock')) {
-                // Use stored course distance for accurate water level tracking
+                // All obstacles should have courseDistance set at creation
                 if (obstacle.userData.courseDistance !== undefined) {
                     const obstacleT = splinePath.distanceToT(obstacle.userData.courseDistance);
                     const waterLevel = splinePath.getPointAt(obstacleT).y;
