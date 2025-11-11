@@ -1334,6 +1334,14 @@ const spawnCompetitorDucks = () => {
     const startT = splinePath.distanceToT(0);
     const startPos = splinePath.getPointAt(startT);
 
+    // Create shuffled race numbers 1-150 for competitor ducks
+    const raceNumbers = Array.from({length: NUM_COMPETITORS}, (_, i) => i + 1);
+    // Shuffle race numbers so they're not in order
+    for (let i = raceNumbers.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [raceNumbers[i], raceNumbers[j]] = [raceNumbers[j], raceNumbers[i]];
+    }
+
     // Spawn ducks in a grid formation - PLAYER STARTS IN MIDDLE OF PACK
     const ducksPerRow = 15;
     const rowSpacing = 3;
@@ -1348,8 +1356,8 @@ const spawnCompetitorDucks = () => {
         // Random color
         const color = DUCK_COLORS[Math.floor(Math.random() * DUCK_COLORS.length)];
 
-        // Random race number
-        const raceNumber = Math.floor(Math.random() * 9999) + 1;
+        // Sequential race number from shuffled array (1-150)
+        const raceNumber = raceNumbers[i];
 
         const competitorDuck = createCompetitorDuck(color, raceNumber);
 
@@ -3096,12 +3104,12 @@ const init = () => {
 const startGame = () => {
     console.log('🎮 Starting game...');
 
-    // Get duck number from input (or random if blank)
+    // Get duck number from input (or assign 151 if blank)
     const duckNumberInput = document.getElementById('duckNumber');
     const inputValue = duckNumberInput ? parseInt(duckNumberInput.value) : null;
-    gameState.duckNumber = (inputValue && inputValue >= 1 && inputValue <= 9999)
+    gameState.duckNumber = (inputValue && inputValue >= 1 && inputValue <= 151)
         ? inputValue
-        : Math.floor(Math.random() * 9999) + 1;
+        : 151; // Player is duck #151 (competitors are 1-150)
     console.log(`🦆 Player duck #${gameState.duckNumber}`);
 
     gameState.isPlaying = true;
