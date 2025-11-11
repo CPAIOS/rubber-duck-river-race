@@ -3885,7 +3885,13 @@ const gameLoop = () => {
             }
 
             // Collision detection - check for obstacles (skip during grace period)
-            if (gameState.startGracePeriod === 0 && checkCollision(duck, obstacle)) {
+            // Use larger collision radius for player (3.0 instead of 2.0)
+            const playerCollisionDist = Math.sqrt(
+                Math.pow(duck.position.x - obstacle.position.x, 2) +
+                Math.pow(duck.position.z - obstacle.position.z, 2)
+            );
+
+            if (gameState.startGracePeriod === 0 && playerCollisionDist < 3.0) {
                 if (obstacle.userData.type === 'rapids' || obstacle.userData.type === 'shader_rapids') {
                     // Rapids already handled above with physics
                     // Extra damage if you hit a rock (50% for rubber duck!)
@@ -3893,32 +3899,31 @@ const gameLoop = () => {
                     gameState.score -= 20;
                 } else if (obstacle.userData.type === 'shader_waterfall') {
                     // Waterfall already handled above
-                } else {
+                } else if (obstacle.userData.type === 'rock' || obstacle.userData.type === 'log') {
                     // Regular obstacles (rocks/logs) - check if duck can jump over
-                    const isHighEnough = gameState.jumpHeight > 1.5;
+                    const isHighEnough = gameState.jumpHeight > 2.0;
 
                     if (!isHighEnough) {
                         gameState.health -= Math.floor((obstacle.userData.damage || 10) * 0.5); // 50% for rubber duck!
                         gameState.score -= 50;
 
-                        // 💥 BUMP BACK PHYSICS - Obstacle collision!
+                        // 💥 STRONG BUMP BACK PHYSICS - Obstacle collision!
                         const bumpAngle = Math.atan2(duck.position.z - obstacle.position.z,
                                                        duck.position.x - obstacle.position.x);
-                        const bumpDist = Math.sqrt(
-                            Math.pow(duck.position.x - obstacle.position.x, 2) +
-                            Math.pow(duck.position.z - obstacle.position.z, 2)
-                        );
-                        const bumpForce = Math.max(0, 3 - bumpDist); // Stronger when closer
+                        const bumpForce = (3.0 - playerCollisionDist) * 4; // Much stronger bump
 
-                        // Bump player sideways (X direction)
-                        gameState.duckPosition += Math.cos(bumpAngle) * bumpForce * 0.8;
+                        // Bump player sideways (X direction) - STRONGER
+                        gameState.duckPosition += Math.cos(bumpAngle) * bumpForce * 1.5;
                         gameState.duckPosition = Math.max(-8, Math.min(8, gameState.duckPosition));
 
-                        console.log(`💥 ROCK HIT! Bumped sideways`);
+                        // Bump player BACKWARD (Z direction) - CRITICAL!
+                        const backwardBump = bumpForce * 0.8;
+                        gameState.splineT -= backwardBump / splinePath.totalLength;
+                        gameState.splineT = Math.max(0, gameState.splineT); // Don't go negative
 
-                        // Remove obstacle after collision
-                        scene.remove(obstacle);
-                        obstacles.splice(index, 1);
+                        console.log(`💥 ROCK HIT! Bumped backward ${backwardBump.toFixed(2)} units`);
+
+                        // DON'T remove obstacle - it stays there to block you!
                     } else {
                         // Successfully jumped over! Bonus points
                         gameState.score += 100;
