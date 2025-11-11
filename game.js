@@ -1528,9 +1528,8 @@ const updateCompetitorDucks = (deltaTime) => {
                         duck.userData.xPosition += Math.cos(bumpAngle) * bumpForce;
                         duck.userData.xPosition = Math.max(-8, Math.min(8, duck.userData.xPosition));
 
-                        // Slow down the duck significantly
-                        duck.userData.currentSpeed *= 0.5; // Lose 50% speed on collision!
-                        duck.userData.distance -= bumpForce * 0.5; // Bump backward in Z too
+                        // Bump backward in Z slightly
+                        duck.userData.distance -= bumpForce * 0.3; // Small backward bump
                     }
                 }
 
@@ -1560,7 +1559,7 @@ const updateCompetitorDucks = (deltaTime) => {
         const duck1 = competitorDucks[i];
         if (!duck1.userData) continue;
 
-        // Check collision with player duck - BOTH ducks get pushed AND slowed!
+        // Check collision with player duck - BOTH ducks get pushed (NO SLOWDOWN!)
         const distToPlayer = Math.sqrt(
             Math.pow(duck1.position.x - duck.position.x, 2) +
             Math.pow(duck1.position.z - duck.position.z, 2)
@@ -1568,21 +1567,15 @@ const updateCompetitorDucks = (deltaTime) => {
         if (distToPlayer < COLLISION_RADIUS && distToPlayer > 0.1) {
             // Calculate push angle
             const angle = Math.atan2(duck1.position.z - duck.position.z, duck1.position.x - duck.position.x);
-            const pushForce = (COLLISION_RADIUS - distToPlayer) * 0.3; // Stronger push!
+            const pushForce = (COLLISION_RADIUS - distToPlayer) * 0.3;
 
             // Push competitor duck away
             duck1.userData.xPosition += Math.cos(angle) * pushForce;
             duck1.userData.xPosition = Math.max(-8, Math.min(8, duck1.userData.xPosition));
 
-            // Slow down competitor duck
-            duck1.userData.currentSpeed *= 0.95; // Lose 5% speed
-
             // Push PLAYER duck away too!
             gameState.duckPosition -= Math.cos(angle) * pushForce * 0.5; // 50% force on player
             gameState.duckPosition = Math.max(-8, Math.min(8, gameState.duckPosition));
-
-            // Slow down player duck
-            gameState.speed *= 0.95; // Lose 5% speed
         }
 
         // Check collision with other competitor ducks
@@ -1596,16 +1589,12 @@ const updateCompetitorDucks = (deltaTime) => {
             );
 
             if (dist < COLLISION_RADIUS && dist > 0.1) {
-                // Ducks collide! Push them apart AND slow them down
+                // Ducks collide! Push them apart (NO SLOWDOWN!)
                 const angle = Math.atan2(duck1.position.z - duck2.position.z, duck1.position.x - duck2.position.x);
-                const pushForce = (COLLISION_RADIUS - dist) * 0.25; // Stronger push
+                const pushForce = (COLLISION_RADIUS - dist) * 0.25;
 
                 duck1.userData.xPosition += Math.cos(angle) * pushForce;
                 duck2.userData.xPosition -= Math.cos(angle) * pushForce;
-
-                // Slow down both ducks slightly
-                duck1.userData.currentSpeed *= 0.97; // Lose 3% speed
-                duck2.userData.currentSpeed *= 0.97; // Lose 3% speed
 
                 // Keep in bounds
                 duck1.userData.xPosition = Math.max(-8, Math.min(8, duck1.userData.xPosition));
@@ -3807,11 +3796,7 @@ const gameLoop = () => {
                         gameState.duckPosition += Math.cos(bumpAngle) * bumpForce * 0.8;
                         gameState.duckPosition = Math.max(-8, Math.min(8, gameState.duckPosition));
 
-                        // Slow down player significantly
-                        gameState.speed *= 0.6; // Lose 40% speed on collision!
-                        gameState.targetSpeed = Math.max(0.1, gameState.targetSpeed * 0.7); // Reduce throttle too
-
-                        console.log(`💥 ROCK HIT! Bumped back, speed reduced to ${gameState.speed.toFixed(2)}`);
+                        console.log(`💥 ROCK HIT! Bumped sideways`);
 
                         // Remove obstacle after collision
                         scene.remove(obstacle);
