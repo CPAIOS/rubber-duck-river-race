@@ -2844,8 +2844,8 @@ const init = () => {
             metalness: 0.4
         });
 
-        // Get starting position - place banner at 18m (player starts at 15m, so 3m ahead and visible)
-        const bannerDistance = 18;
+        // Get starting position - place banner at 50m (well ahead of player at 15m start)
+        const bannerDistance = 50;
         const bannerT = splinePath.distanceToT(bannerDistance);
         const bannerPos = splinePath.getPointAt(bannerT);
 
