@@ -1084,10 +1084,9 @@ const addNumberBadgeToDuck = (duckGroup, number) => {
     flagAssembly.add(flag);
 
     // Position flag assembly at CENTER BACK of duck body (tail area)
-    // Duck orientation: head = -Z (front), tail = +Z (back), top = +Y
-    // Flag will extend to the RIGHT (+X) from the back center
-    flagAssembly.position.set(0, 0.8, 1.2); // Center back, mid-height on body, at tail
-    flagAssembly.rotation.y = 0; // No rotation - flag naturally extends right
+    // Same position as competitor ducks for consistency
+    flagAssembly.position.set(0, 0.65, 1.0); // Center back, mid-height, at tail
+    flagAssembly.rotation.y = 0; // No rotation - flag extends right
     duckModel.add(flagAssembly);
 
     console.log(`🚩 Added race flag #${number} on pole to duck`);
@@ -1163,6 +1162,7 @@ const createDuck = () => {
 
     duckGroup.position.set(0, 0.2, 0);
     duckGroup.rotation.y = 0; // No rotation
+    duckGroup.scale.set(1.2, 1.2, 1.2); // Match competitor duck size
 
     return duckGroup;
 };
@@ -1347,6 +1347,26 @@ const updateCompetitorDucks = (deltaTime) => {
     competitorDucks.forEach(duck => {
         if (!duck.userData) return;
 
+        // 🦅 Check if this duck was grabbed by eagle
+        if (duck.userData.grabbedByEagle) {
+            const grabElapsed = (Date.now() - duck.userData.eagleGrabTime) / 1000;
+            if (grabElapsed < 2) {
+                // Duck is being carried - move it up and away
+                duck.position.y += 1.5;
+                duck.position.x += (Math.random() - 0.5) * 0.2;
+                return; // Skip normal AI behavior
+            } else {
+                // Eagle drops the duck!
+                duck.userData.grabbedByEagle = false;
+                duck.userData.health -= 50; // Take damage from eagle
+                console.log(`💀 Competitor duck #${duck.userData.raceNumber} was dropped by eagle! Health: ${duck.userData.health}`);
+                if (duck.userData.health <= 0) {
+                    duck.visible = false; // Duck is out!
+                    return;
+                }
+            }
+        }
+
         // 🤖 AI PILOT - Competitive racing behavior
 
         // Check if player is nearby (for competitive behavior)
@@ -1429,10 +1449,15 @@ const updateCompetitorDucks = (deltaTime) => {
         // Simple wave bobbing
         duck.position.y += Math.sin(Date.now() * 0.002 + duck.userData.raceNumber) * 0.1;
 
-        // Remove ducks that are too far behind player
-        if (duck.userData.distance < gameState.distance - 100) {
-            scene.remove(duck);
-            competitorDucks = competitorDucks.filter(d => d !== duck);
+        // Hide ducks that are very far behind (for performance) but KEEP them in array for position counting!
+        if (duck.userData.distance < gameState.distance - 200) {
+            if (duck.visible) {
+                duck.visible = false; // Hide but don't remove from array
+            }
+        } else {
+            if (!duck.visible) {
+                duck.visible = true; // Show again if they catch up
+            }
         }
     });
 
@@ -3827,11 +3852,32 @@ const gameLoop = () => {
                     }
 
                     if (isDodging) {
-                        // SUCCESSFUL DODGE! (but don't end swoop immediately, let it continue)
+                        // SUCCESSFUL DODGE! Try to grab a competitor duck instead
                         if (!eagleSwoopHasTouchedWater) {
                             console.log('✨🦆 YOU DODGED THE EAGLE! Nice reflexes!');
                             gameState.score += 500; // Bonus for dodging!
                             eagleSwoopHasTouchedWater = true; // Mark as dodged (reusing flag)
+
+                            // 🦅🦆 Try to grab a nearby competitor duck instead!
+                            let nearestDuck = null;
+                            let nearestDist = Infinity;
+                            competitorDucks.forEach(compDuck => {
+                                if (compDuck.visible && compDuck.userData && compDuck.userData.health > 0) {
+                                    const dist = eagle.position.distanceTo(compDuck.position);
+                                    if (dist < 10 && dist < nearestDist) {
+                                        nearestDist = dist;
+                                        nearestDuck = compDuck;
+                                    }
+                                }
+                            });
+
+                            if (nearestDuck) {
+                                // Eagle grabs the competitor duck!
+                                console.log(`🦅🦆 Eagle grabbed competitor duck #${nearestDuck.userData.raceNumber} instead!`);
+                                nearestDuck.userData.grabbedByEagle = true;
+                                nearestDuck.userData.eagleGrabTime = Date.now();
+                                nearestDuck.userData.eagleGrabStartY = nearestDuck.position.y;
+                            }
                         }
                     } else {
                         // Eagle grabbed the duck!
