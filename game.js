@@ -1078,14 +1078,15 @@ const addNumberBadgeToDuck = (duckGroup, number) => {
     const flagGeometry = new THREE.PlaneGeometry(flagWidth, flagHeight);
     const flag = new THREE.Mesh(flagGeometry, flagMaterial);
 
-    // Position flag at top of pole - attached to pole and sticking out
-    flag.position.set(flagWidth / 2, poleHeight - flagHeight / 2, 0); // Offset so left edge touches pole
-    flag.rotation.y = 0; // Face forward/backward (parallel to duck direction)
+    // Position flag at top of pole - attached to pole and sticking out TO THE SIDE
+    flag.position.set(flagWidth / 2, poleHeight - flagHeight / 2, 0); // Flag extends to the right of pole
+    flag.rotation.y = 0; // Face forward (visible from camera)
     flagAssembly.add(flag);
 
-    // Position flag assembly from BACK RIGHT corner of duck body, near tail
-    flagAssembly.position.set(0.5, 0.1, 1.0); // Right side, very low, at back near tail
-    flagAssembly.rotation.y = 0; // No rotation - flag extends straight to the side
+    // Position flag assembly from BACK corner of duck body (tail area)
+    // Duck's tail is at positive Z (back), head at negative Z (front)
+    flagAssembly.position.set(0.6, 0.3, 0.9); // Right side, at body level, at BACK/TAIL
+    flagAssembly.rotation.y = Math.PI / 2; // Rotate 90° so flag extends OUTWARD to the right
     duckModel.add(flagAssembly);
 
     console.log(`🚩 Added race flag #${number} on pole to duck`);
@@ -1198,6 +1199,56 @@ const createCompetitorDuck = (color, raceNumber) => {
 
     // Overall scale to match player duck size
     duckGroup.scale.set(1.2, 1.2, 1.2);
+
+    // Add race number flag
+    const flagAssembly = new THREE.Group();
+
+    // Thin wire pole
+    const poleHeight = 1.6;
+    const poleRadius = 0.01;
+    const poleGeometry = new THREE.CylinderGeometry(poleRadius, poleRadius, poleHeight, 4);
+    const poleMaterial = new THREE.MeshStandardMaterial({
+        color: 0xC0C0C0,
+        roughness: 0.3,
+        metalness: 0.9
+    });
+    const pole = new THREE.Mesh(poleGeometry, poleMaterial);
+    pole.position.y = poleHeight / 2;
+    flagAssembly.add(pole);
+
+    // Create canvas with number
+    const canvas = document.createElement('canvas');
+    canvas.width = 128;
+    canvas.height = 90;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, 128, 90);
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(1, 1, 126, 88);
+    ctx.fillStyle = '#000000';
+    ctx.font = '60px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(raceNumber.toString(), 64, 45);
+
+    // Create flag
+    const flagTexture = new THREE.CanvasTexture(canvas);
+    const flagMaterial = new THREE.MeshBasicMaterial({
+        map: flagTexture,
+        side: THREE.DoubleSide
+    });
+    const flagWidth = 0.6;
+    const flagHeight = 0.4;
+    const flagGeometry = new THREE.PlaneGeometry(flagWidth, flagHeight);
+    const flag = new THREE.Mesh(flagGeometry, flagMaterial);
+    flag.position.set(flagWidth / 2, poleHeight - flagHeight / 2, 0);
+    flagAssembly.add(flag);
+
+    // Position flag at back corner
+    flagAssembly.position.set(0.5, 0.25, 0.75);
+    flagAssembly.rotation.y = Math.PI / 2;
+    duckGroup.add(flagAssembly);
 
     // Store metadata - AI pilot attributes
     duckGroup.userData = {
@@ -1328,25 +1379,33 @@ const updateCompetitorDucks = (deltaTime) => {
     });
 
     // 🦆💥 Duck-to-Duck Collision Detection & Bumping
-    const COLLISION_RADIUS = 1.2; // Distance at which ducks collide
+    const COLLISION_RADIUS = 2.5; // Distance at which ducks collide (increased for larger ducks)
+
     for (let i = 0; i < competitorDucks.length; i++) {
         const duck1 = competitorDucks[i];
         if (!duck1.userData) continue;
 
-        // Check collision with player duck
+        // Check collision with player duck - BOTH ducks get pushed!
         const distToPlayer = Math.sqrt(
             Math.pow(duck1.position.x - duck.position.x, 2) +
             Math.pow(duck1.position.z - duck.position.z, 2)
         );
-        if (distToPlayer < COLLISION_RADIUS) {
-            // Bump competitor duck away from player
+        if (distToPlayer < COLLISION_RADIUS && distToPlayer > 0.1) {
+            // Calculate push angle
             const angle = Math.atan2(duck1.position.z - duck.position.z, duck1.position.x - duck.position.x);
-            duck1.userData.xPosition += Math.cos(angle) * 0.15;
+            const pushForce = (COLLISION_RADIUS - distToPlayer) * 0.3; // Stronger push!
+
+            // Push competitor duck away
+            duck1.userData.xPosition += Math.cos(angle) * pushForce;
             duck1.userData.xPosition = Math.max(-8, Math.min(8, duck1.userData.xPosition));
+
+            // Push PLAYER duck away too!
+            gameState.duckPosition -= Math.cos(angle) * pushForce * 0.5; // 50% force on player
+            gameState.duckPosition = Math.max(-8, Math.min(8, gameState.duckPosition));
         }
 
-        // Check collision with other competitor ducks (only check nearby ducks for performance)
-        for (let j = i + 1; j < Math.min(i + 20, competitorDucks.length); j++) {
+        // Check collision with other competitor ducks
+        for (let j = i + 1; j < competitorDucks.length; j++) {
             const duck2 = competitorDucks[j];
             if (!duck2.userData) continue;
 
@@ -1355,10 +1414,10 @@ const updateCompetitorDucks = (deltaTime) => {
                 Math.pow(duck1.position.z - duck2.position.z, 2)
             );
 
-            if (dist < COLLISION_RADIUS) {
-                // Ducks collide! Push them apart
+            if (dist < COLLISION_RADIUS && dist > 0.1) {
+                // Ducks collide! Push them apart with stronger force
                 const angle = Math.atan2(duck1.position.z - duck2.position.z, duck1.position.x - duck2.position.x);
-                const pushForce = (COLLISION_RADIUS - dist) * 0.1;
+                const pushForce = (COLLISION_RADIUS - dist) * 0.25; // Stronger push
 
                 duck1.userData.xPosition += Math.cos(angle) * pushForce;
                 duck2.userData.xPosition -= Math.cos(angle) * pushForce;
@@ -1369,6 +1428,16 @@ const updateCompetitorDucks = (deltaTime) => {
             }
         }
     }
+
+    // 🏆 Calculate player's race position
+    let ducksAhead = 0;
+    competitorDucks.forEach(compDuck => {
+        if (compDuck.userData && compDuck.userData.distance > gameState.distance) {
+            ducksAhead++;
+        }
+    });
+    gameState.position = ducksAhead + 1; // +1 because positions start at 1, not 0
+    gameState.totalDucks = competitorDucks.length + 1; // +1 for player
 };
 
 // Create river surface
