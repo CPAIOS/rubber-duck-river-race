@@ -1017,14 +1017,10 @@ loader.load('Rubber_Ducky_1111020056_texture.glb', (gltf) => {
 
 // Add race number flag on pole to duck
 const addNumberBadgeToDuck = (duckGroup, number) => {
-    // Find the duck model in the group
-    const duckModel = duckGroup.children[0];
-    if (!duckModel) return;
-
     // Remove old flag assembly if exists
-    const oldFlag = duckModel.getObjectByName('flagAssembly');
+    const oldFlag = duckGroup.getObjectByName('flagAssembly');
     if (oldFlag) {
-        duckModel.remove(oldFlag);
+        duckGroup.remove(oldFlag);
     }
 
     // Create group for flag and pole
@@ -1076,7 +1072,7 @@ const addNumberBadgeToDuck = (duckGroup, number) => {
     // Position flag at center back of duck - EXACT COPY from competitor duck code
     flagAssembly.position.set(0, 0.65, 1.0);
     flagAssembly.rotation.y = 0;
-    duckModel.add(flagAssembly);
+    duckGroup.add(flagAssembly);  // Add to duckGroup, NOT duckModel!
 
     console.log(`🚩 Added race flag #${number} on pole to duck`);
 };
