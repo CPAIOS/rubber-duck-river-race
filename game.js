@@ -2815,19 +2815,20 @@ const init = () => {
             metalness: 0.4
         });
 
-        // Get starting position (at distance 0)
-        const startT = splinePath.distanceToT(0);
-        const startPos = splinePath.getPointAt(startT);
+        // Get starting position - place banner at 12m (player starts at 15m, so banner is 3m ahead)
+        const bannerDistance = 12;
+        const bannerT = splinePath.distanceToT(bannerDistance);
+        const bannerPos = splinePath.getPointAt(bannerT);
 
         // Left pole
         const leftPole = new THREE.Mesh(poleGeometry, poleMaterial);
-        leftPole.position.set(-15, startPos.y + poleHeight / 2, startPos.z - 5);
+        leftPole.position.set(-15, bannerPos.y + poleHeight / 2, bannerPos.z);
         leftPole.castShadow = true;
         scene.add(leftPole);
 
         // Right pole
         const rightPole = new THREE.Mesh(poleGeometry, poleMaterial);
-        rightPole.position.set(15, startPos.y + poleHeight / 2, startPos.z - 5);
+        rightPole.position.set(15, bannerPos.y + poleHeight / 2, bannerPos.z);
         rightPole.castShadow = true;
         scene.add(rightPole);
 
@@ -2843,11 +2844,13 @@ const init = () => {
         const startBanner = new THREE.Mesh(bannerGeometry, bannerMaterial);
 
         // Position banner at top of poles, spanning across
-        startBanner.position.set(0, startPos.y + poleHeight - 2, startPos.z - 5);
+        startBanner.position.set(0, bannerPos.y + poleHeight - 2, bannerPos.z);
         startBanner.rotation.x = Math.PI * 0.1; // Slight tilt for visibility
         startBanner.castShadow = true;
         startBanner.receiveShadow = true;
         scene.add(startBanner);
+
+        console.log(`✅ Starting line banner positioned at ${bannerDistance}m (player starts at 15m)`);
 
         console.log('✅ Starting line banner with logo created!');
     }, undefined, (error) => {
