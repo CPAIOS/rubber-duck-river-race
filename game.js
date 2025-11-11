@@ -2863,6 +2863,16 @@ const init = () => {
         // Create banner hanging from CENTER of line (wider so text isn't cut off)
         const bannerWidth = 14; // Wider to show full logo
         const bannerHeight = 5;
+
+        // Create white background for banner
+        const bgGeometry = new THREE.PlaneGeometry(bannerWidth, bannerHeight);
+        const bgMaterial = new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            side: THREE.DoubleSide
+        });
+        const bannerBackground = new THREE.Mesh(bgGeometry, bgMaterial);
+
+        // Create logo on top of white background
         const bannerGeometry = new THREE.PlaneGeometry(bannerWidth, bannerHeight);
         const bannerMaterial = new THREE.MeshStandardMaterial({
             map: startingLogo,
@@ -2873,6 +2883,14 @@ const init = () => {
 
         // Position banner hanging from center of line
         const bannerTopY = lineHeight - 0.5;
+
+        // Position white background slightly behind logo
+        bannerBackground.position.set(0, bannerTopY - bannerHeight / 2, bannerPos.z + 0.01);
+        bannerBackground.castShadow = true;
+        bannerBackground.receiveShadow = true;
+        scene.add(bannerBackground);
+
+        // Position logo on top
         startBanner.position.set(0, bannerTopY - bannerHeight / 2, bannerPos.z);
         startBanner.castShadow = true;
         startBanner.receiveShadow = true;
