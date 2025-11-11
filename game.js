@@ -2841,7 +2841,7 @@ const init = () => {
 
         // Create thin line/rope spanning across canyon
         const canyonWidth = 30; // Width of canyon
-        const lineHeight = bannerPos.y + 12; // Height to string the line
+        const lineHeight = bannerPos.y + 15; // Height to string the line (higher up)
         const lineGeometry = new THREE.CylinderGeometry(0.05, 0.05, canyonWidth, 8);
         const lineMaterial = new THREE.MeshStandardMaterial({
             color: 0x2a2a2a,
@@ -2852,9 +2852,9 @@ const init = () => {
         line.rotation.z = Math.PI / 2; // Rotate to horizontal
         scene.add(line);
 
-        // Create smaller banner hanging from CENTER of line
-        const bannerWidth = 16; // Smaller banner
-        const bannerHeight = 6;
+        // Create narrower banner hanging from CENTER of line
+        const bannerWidth = 10; // Narrower to avoid stretching
+        const bannerHeight = 5;
         const bannerGeometry = new THREE.PlaneGeometry(bannerWidth, bannerHeight);
         const bannerMaterial = new THREE.MeshStandardMaterial({
             map: startingLogo,
@@ -2868,6 +2868,36 @@ const init = () => {
         startBanner.castShadow = true;
         startBanner.receiveShadow = true;
         scene.add(startBanner);
+
+        // Add "Rubber Duck River Run" text below logo
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        canvas.width = 512;
+        canvas.height = 128;
+
+        context.fillStyle = '#ffffff';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+
+        context.fillStyle = '#000000';
+        context.font = 'bold 48px Arial';
+        context.textAlign = 'center';
+        context.textBaseline = 'middle';
+        context.fillText('Rubber Duck River Run', canvas.width / 2, canvas.height / 2);
+
+        const textTexture = new THREE.CanvasTexture(canvas);
+        const textGeometry = new THREE.PlaneGeometry(12, 3);
+        const textMaterial = new THREE.MeshStandardMaterial({
+            map: textTexture,
+            side: THREE.DoubleSide,
+            transparent: true
+        });
+        const textBanner = new THREE.Mesh(textGeometry, textMaterial);
+
+        // Position text below the logo banner
+        textBanner.position.set(0, lineHeight - bannerHeight - 2.5, bannerPos.z);
+        textBanner.castShadow = true;
+        textBanner.receiveShadow = true;
+        scene.add(textBanner);
 
         console.log(`✅ Starting line banner at ${bannerDistance}m - hanging from line across canyon`);
     }, undefined, (error) => {
