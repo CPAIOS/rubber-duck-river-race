@@ -1151,36 +1151,52 @@ const createDuck = () => {
     return duckGroup;
 };
 
-// 🦆🦆🦆 Create Competitor Duck (simplified version for performance)
+// 🦆🦆🦆 Create Competitor Duck (uses SAME 3D model as player!)
 const createCompetitorDuck = (color, raceNumber) => {
     const duckGroup = new THREE.Group();
 
-    // Use simplified geometry for competitors - SCALED TO MATCH PLAYER DUCK
-    const bodyGeometry = new THREE.SphereGeometry(0.8, 8, 8); // Increased from 0.6 to 0.8
-    bodyGeometry.scale(1, 0.8, 1.2);
-    const bodyMaterial = new THREE.MeshStandardMaterial({
-        color: color,
-        roughness: 0.3,
-        metalness: 0.1
-    });
-    const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-    body.position.y = 0.6; // Raised from 0.5
-    body.castShadow = true;
-    duckGroup.add(body);
+    // Use the SAME 3D model as player duck if loaded
+    if (duckModelLoaded && duckModel) {
+        const duckClone = duckModel.clone();
+        duckClone.position.set(0, 0.5, 0); // Same as player duck
 
-    // Simple head - scaled up
-    const headGeometry = new THREE.SphereGeometry(0.45, 8, 8); // Increased from 0.35
-    const head = new THREE.Mesh(headGeometry, bodyMaterial);
-    head.position.set(0, 1.5, -0.5); // Raised and adjusted
-    duckGroup.add(head);
+        // Change the color by traversing the model and updating materials
+        duckClone.traverse((child) => {
+            if (child.isMesh && child.material) {
+                // Clone the material so we don't affect other ducks
+                child.material = child.material.clone();
+                // Tint the material with the competitor color
+                child.material.color.setHex(color);
+            }
+        });
 
-    // Simple beak - scaled up
-    const beakGeometry = new THREE.ConeGeometry(0.2, 0.45, 6); // Increased from 0.15, 0.35
-    const beakMaterial = new THREE.MeshStandardMaterial({ color: 0xFF8800 });
-    const beak = new THREE.Mesh(beakGeometry, beakMaterial);
-    beak.rotation.x = Math.PI / 2;
-    beak.position.set(0, 1.4, -1.0);
-    duckGroup.add(beak);
+        duckGroup.add(duckClone);
+    } else {
+        // Fallback to procedural duck if model not loaded yet
+        const bodyGeometry = new THREE.SphereGeometry(0.8, 8, 8);
+        bodyGeometry.scale(1, 0.8, 1.2);
+        const bodyMaterial = new THREE.MeshStandardMaterial({
+            color: color,
+            roughness: 0.3,
+            metalness: 0.1
+        });
+        const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+        body.position.y = 0.6;
+        body.castShadow = true;
+        duckGroup.add(body);
+
+        const headGeometry = new THREE.SphereGeometry(0.45, 8, 8);
+        const head = new THREE.Mesh(headGeometry, bodyMaterial);
+        head.position.set(0, 1.5, -0.5);
+        duckGroup.add(head);
+
+        const beakGeometry = new THREE.ConeGeometry(0.2, 0.45, 6);
+        const beakMaterial = new THREE.MeshStandardMaterial({ color: 0xFF8800 });
+        const beak = new THREE.Mesh(beakGeometry, beakMaterial);
+        beak.rotation.x = Math.PI / 2;
+        beak.position.set(0, 1.4, -1.0);
+        duckGroup.add(beak);
+    }
 
     // Add race number flag
     const flagAssembly = new THREE.Group();
@@ -1237,17 +1253,17 @@ const createCompetitorDuck = (color, raceNumber) => {
     const skillRoll = Math.random();
     let aiSkill, baseSpeed, aiType;
 
-    if (skillRoll < 0.10) { // 10% Elite racers
+    if (skillRoll < 0.15) { // 15% Elite racers - THE REAL COMPETITION!
         aiSkill = 'elite';
-        baseSpeed = 0.70 + Math.random() * 0.10; // 0.70-0.80 speed (matches player max)
+        baseSpeed = 0.75 + Math.random() * 0.05; // 0.75-0.80 speed (AT full throttle!)
         aiType = 'aggressive'; // Will try to stay ahead
-    } else if (skillRoll < 0.30) { // 20% Good racers
+    } else if (skillRoll < 0.35) { // 20% Good racers
         aiSkill = 'good';
-        baseSpeed = 0.60 + Math.random() * 0.10; // 0.60-0.70 speed
+        baseSpeed = 0.60 + Math.random() * 0.15; // 0.60-0.75 speed
         aiType = 'competitive'; // Will speed up if behind
-    } else { // 70% Average racers
+    } else { // 65% Average racers
         aiSkill = 'average';
-        baseSpeed = 0.40 + Math.random() * 0.20; // 0.40-0.60 speed
+        baseSpeed = 0.35 + Math.random() * 0.25; // 0.35-0.60 speed
         aiType = 'casual'; // Steady pace
     }
 
@@ -1356,18 +1372,13 @@ const updateCompetitorDucks = (deltaTime) => {
 
         // AI Type Behaviors
         if (duck.userData.aiType === 'aggressive') {
-            // Elite racers: Always push hard, speed up near player
-            if (isNearPlayer && duck.userData.distance <= gameState.distance) {
-                // Player is ahead! Speed up to catch them (capped at player max 0.8)
-                duck.userData.currentSpeed = Math.min(duck.userData.baseSpeed * 1.10, 0.8);
-            } else {
-                duck.userData.currentSpeed = duck.userData.baseSpeed;
-            }
+            // Elite racers: ALWAYS AT FULL THROTTLE (only slowed by obstacles)
+            duck.userData.currentSpeed = duck.userData.baseSpeed;
         } else if (duck.userData.aiType === 'competitive') {
             // Good racers: Speed up if falling behind
             if (isNearPlayer && duck.userData.distance < gameState.distance - 5) {
-                // Falling behind! Speed up (capped at 0.75)
-                duck.userData.currentSpeed = Math.min(duck.userData.baseSpeed * 1.10, 0.75);
+                // Falling behind! Speed up slightly
+                duck.userData.currentSpeed = Math.min(duck.userData.baseSpeed * 1.05, 0.75);
             } else {
                 duck.userData.currentSpeed = duck.userData.baseSpeed;
             }
@@ -1376,8 +1387,8 @@ const updateCompetitorDucks = (deltaTime) => {
             duck.userData.currentSpeed = duck.userData.baseSpeed * (0.95 + Math.random() * 0.1);
         }
 
-        // Move duck forward at current speed
-        duck.userData.distance += duck.userData.currentSpeed * deltaTime * 60; // 60 = speed multiplier
+        // Move duck forward at current speed (same scale as player)
+        duck.userData.distance += duck.userData.currentSpeed * deltaTime * 80; // Adjusted multiplier for competitive balance
 
         // AI Steering logic - Elite ducks make faster decisions
         const steerInterval = duck.userData.aiSkill === 'elite' ? 20 :
@@ -1430,7 +1441,7 @@ const updateCompetitorDucks = (deltaTime) => {
         // Simple wave bobbing
         duck.position.y += Math.sin(Date.now() * 0.002 + duck.userData.raceNumber) * 0.1;
 
-        // 🪨💥 Competitor Duck Obstacle Collision Detection
+        // 🪨💥 Competitor Duck Obstacle Collision Detection & Physics
         obstacles.forEach(obstacle => {
             const dist = Math.sqrt(
                 Math.pow(duck.position.x - obstacle.position.x, 2) +
@@ -1439,11 +1450,24 @@ const updateCompetitorDucks = (deltaTime) => {
 
             if (dist < 2) { // Within collision range
                 if (obstacle.userData.type === 'rapids' || obstacle.userData.type === 'shader_rapids') {
-                    // Rapids damage (reduced)
+                    // Rapids damage (reduced) but no bump back
                     duck.userData.health -= Math.floor((obstacle.userData.damage || 15) * 0.3);
                 } else if (obstacle.userData.type === 'rock' || obstacle.userData.type === 'log') {
-                    // Rock/log damage
+                    // Rock/log collision - BUMP BACK!
                     duck.userData.health -= Math.floor((obstacle.userData.damage || 10) * 0.3);
+
+                    // Calculate bump direction (away from obstacle)
+                    const bumpAngle = Math.atan2(duck.position.z - obstacle.position.z,
+                                                   duck.position.x - obstacle.position.x);
+                    const bumpForce = (2 - dist) * 2; // Stronger bump when closer
+
+                    // Bump duck sideways (X direction)
+                    duck.userData.xPosition += Math.cos(bumpAngle) * bumpForce;
+                    duck.userData.xPosition = Math.max(-8, Math.min(8, duck.userData.xPosition));
+
+                    // Slow down the duck significantly
+                    duck.userData.currentSpeed *= 0.5; // Lose 50% speed on collision!
+                    duck.userData.distance -= bumpForce * 0.5; // Bump backward in Z too
                 }
 
                 // Check if duck died from obstacle
@@ -3681,12 +3705,31 @@ const gameLoop = () => {
                 } else if (obstacle.userData.type === 'shader_waterfall') {
                     // Waterfall already handled above
                 } else {
-                    // Regular obstacles - check if duck can jump over
+                    // Regular obstacles (rocks/logs) - check if duck can jump over
                     const isHighEnough = gameState.jumpHeight > 1.5;
 
                     if (!isHighEnough) {
                         gameState.health -= Math.floor((obstacle.userData.damage || 10) * 0.5); // 50% for rubber duck!
                         gameState.score -= 50;
+
+                        // 💥 BUMP BACK PHYSICS - Obstacle collision!
+                        const bumpAngle = Math.atan2(duck.position.z - obstacle.position.z,
+                                                       duck.position.x - obstacle.position.x);
+                        const bumpDist = Math.sqrt(
+                            Math.pow(duck.position.x - obstacle.position.x, 2) +
+                            Math.pow(duck.position.z - obstacle.position.z, 2)
+                        );
+                        const bumpForce = Math.max(0, 3 - bumpDist); // Stronger when closer
+
+                        // Bump player sideways (X direction)
+                        gameState.duckPosition += Math.cos(bumpAngle) * bumpForce * 0.8;
+                        gameState.duckPosition = Math.max(-8, Math.min(8, gameState.duckPosition));
+
+                        // Slow down player significantly
+                        gameState.speed *= 0.6; // Lose 40% speed on collision!
+                        gameState.targetSpeed = Math.max(0.1, gameState.targetSpeed * 0.7); // Reduce throttle too
+
+                        console.log(`💥 ROCK HIT! Bumped back, speed reduced to ${gameState.speed.toFixed(2)}`);
 
                         // Remove obstacle after collision
                         scene.remove(obstacle);
