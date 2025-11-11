@@ -1078,15 +1078,16 @@ const addNumberBadgeToDuck = (duckGroup, number) => {
     const flagGeometry = new THREE.PlaneGeometry(flagWidth, flagHeight);
     const flag = new THREE.Mesh(flagGeometry, flagMaterial);
 
-    // Position flag at top of pole - attached to pole and sticking out TO THE SIDE
-    flag.position.set(flagWidth / 2, poleHeight - flagHeight / 2, 0); // Flag extends to the right of pole
-    flag.rotation.y = 0; // Face forward (visible from camera)
+    // Position flag at top of pole - flag extends horizontally from pole
+    flag.position.set(flagWidth / 2, poleHeight - flagHeight / 2, 0); // Flag extends in +X direction
+    flag.rotation.y = 0; // Face forward (visible from camera behind duck)
     flagAssembly.add(flag);
 
-    // Position flag assembly from BACK corner of duck body (tail area)
-    // Duck's tail is at positive Z (back), head at negative Z (front)
-    flagAssembly.position.set(0.6, 0.3, 0.9); // Right side, at body level, at BACK/TAIL
-    flagAssembly.rotation.y = Math.PI / 2; // Rotate 90° so flag extends OUTWARD to the right
+    // Position flag assembly at CENTER BACK of duck body (tail area)
+    // Duck orientation: head = -Z (front), tail = +Z (back), top = +Y
+    // Flag will extend to the RIGHT (+X) from the back center
+    flagAssembly.position.set(0, 0.8, 1.2); // Center back, mid-height on body, at tail
+    flagAssembly.rotation.y = 0; // No rotation - flag naturally extends right
     duckModel.add(flagAssembly);
 
     console.log(`🚩 Added race flag #${number} on pole to duck`);
@@ -1245,10 +1246,29 @@ const createCompetitorDuck = (color, raceNumber) => {
     flag.position.set(flagWidth / 2, poleHeight - flagHeight / 2, 0);
     flagAssembly.add(flag);
 
-    // Position flag at back corner
-    flagAssembly.position.set(0.5, 0.25, 0.75);
-    flagAssembly.rotation.y = Math.PI / 2;
+    // Position flag at center back of duck (same as player duck)
+    flagAssembly.position.set(0, 0.65, 1.0); // Center back, mid-height, at tail
+    flagAssembly.rotation.y = 0; // Flag extends to the right
     duckGroup.add(flagAssembly);
+
+    // 🤖 AI Skill Level System
+    // Determine AI skill level based on duck number
+    const skillRoll = Math.random();
+    let aiSkill, baseSpeed, aiType;
+
+    if (skillRoll < 0.10) { // 10% Elite racers
+        aiSkill = 'elite';
+        baseSpeed = 0.85 + Math.random() * 0.15; // 0.85-1.0 speed
+        aiType = 'aggressive'; // Will try to stay ahead
+    } else if (skillRoll < 0.30) { // 20% Good racers
+        aiSkill = 'good';
+        baseSpeed = 0.70 + Math.random() * 0.15; // 0.70-0.85 speed
+        aiType = 'competitive'; // Will speed up if behind
+    } else { // 70% Average racers
+        aiSkill = 'average';
+        baseSpeed = 0.50 + Math.random() * 0.25; // 0.50-0.75 speed
+        aiType = 'casual'; // Steady pace
+    }
 
     // Store metadata - AI pilot attributes
     duckGroup.userData = {
@@ -1256,10 +1276,13 @@ const createCompetitorDuck = (color, raceNumber) => {
         raceNumber: raceNumber,
         color: color,
         xPosition: 0, // X position relative to path (-8 to 8)
-        baseSpeed: 0.5 + Math.random() * 0.3, // Independent speed 0.5-0.8
-        targetSpeed: 0.5 + Math.random() * 0.3, // Target speed for variation
+        baseSpeed: baseSpeed,
+        currentSpeed: baseSpeed, // Actual speed (can vary)
+        aiSkill: aiSkill, // 'elite', 'good', or 'average'
+        aiType: aiType, // 'aggressive', 'competitive', or 'casual'
         steerDirection: 0, // -1 left, 0 center, 1 right
         steerCooldown: 0, // Frames until next steer decision
+        boostCooldown: 0, // Frames until can boost again
         distance: 0, // Distance along course
         health: 100
     };
@@ -1324,30 +1347,65 @@ const updateCompetitorDucks = (deltaTime) => {
     competitorDucks.forEach(duck => {
         if (!duck.userData) return;
 
-        // 🤖 AI PILOT - Independent movement for each duck
-        // Move duck forward at its own speed
-        duck.userData.distance += duck.userData.baseSpeed * deltaTime * 60; // 60 = speed multiplier
+        // 🤖 AI PILOT - Competitive racing behavior
 
-        // AI Steering logic
-        if (duck.userData.steerCooldown <= 0) {
-            // Make a new steering decision every 30-90 frames
-            duck.userData.steerCooldown = 30 + Math.floor(Math.random() * 60);
+        // Check if player is nearby (for competitive behavior)
+        const distanceToPlayer = Math.abs(duck.userData.distance - gameState.distance);
+        const isNearPlayer = distanceToPlayer < 20; // Within 20 units
 
-            // Random steering: 40% left, 40% right, 20% center
-            const rand = Math.random();
-            if (rand < 0.4) {
-                duck.userData.steerDirection = -1; // Steer left
-            } else if (rand < 0.8) {
-                duck.userData.steerDirection = 1; // Steer right
+        // AI Type Behaviors
+        if (duck.userData.aiType === 'aggressive') {
+            // Elite racers: Always push hard, speed up near player
+            if (isNearPlayer && duck.userData.distance <= gameState.distance) {
+                // Player is ahead! Speed up to catch them
+                duck.userData.currentSpeed = Math.min(duck.userData.baseSpeed * 1.15, 1.0);
             } else {
-                duck.userData.steerDirection = 0; // Go straight
+                duck.userData.currentSpeed = duck.userData.baseSpeed;
+            }
+        } else if (duck.userData.aiType === 'competitive') {
+            // Good racers: Speed up if falling behind
+            if (isNearPlayer && duck.userData.distance < gameState.distance - 5) {
+                // Falling behind! Speed up
+                duck.userData.currentSpeed = Math.min(duck.userData.baseSpeed * 1.10, 0.9);
+            } else {
+                duck.userData.currentSpeed = duck.userData.baseSpeed;
+            }
+        } else {
+            // Average racers: Steady pace with slight variation
+            duck.userData.currentSpeed = duck.userData.baseSpeed * (0.95 + Math.random() * 0.1);
+        }
+
+        // Move duck forward at current speed
+        duck.userData.distance += duck.userData.currentSpeed * deltaTime * 60; // 60 = speed multiplier
+
+        // AI Steering logic - Elite ducks make faster decisions
+        const steerInterval = duck.userData.aiSkill === 'elite' ? 20 :
+                            duck.userData.aiSkill === 'good' ? 40 : 60;
+
+        if (duck.userData.steerCooldown <= 0) {
+            duck.userData.steerCooldown = steerInterval + Math.floor(Math.random() * 30);
+
+            // Elite AI: More strategic steering
+            if (duck.userData.aiSkill === 'elite') {
+                // 60% straight, 20% left, 20% right (more efficient)
+                const rand = Math.random();
+                if (rand < 0.60) duck.userData.steerDirection = 0;
+                else if (rand < 0.80) duck.userData.steerDirection = -1;
+                else duck.userData.steerDirection = 1;
+            } else {
+                // Regular AI: Random steering
+                const rand = Math.random();
+                if (rand < 0.4) duck.userData.steerDirection = -1;
+                else if (rand < 0.8) duck.userData.steerDirection = 1;
+                else duck.userData.steerDirection = 0;
             }
         }
         duck.userData.steerCooldown--;
 
         // Apply steering
+        const steerSpeed = duck.userData.aiSkill === 'elite' ? 0.06 : 0.08;
         if (duck.userData.steerDirection !== 0) {
-            duck.userData.xPosition += duck.userData.steerDirection * 0.08;
+            duck.userData.xPosition += duck.userData.steerDirection * steerSpeed;
         }
 
         // Avoid walls - steer away from edges
