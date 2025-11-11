@@ -90,7 +90,14 @@ export class SplinePathSystem {
             new THREE.Vector3(-5, -100, -1550),
             new THREE.Vector3(0, -100, -1700),
             new THREE.Vector3(5, -100, -1850),
-            new THREE.Vector3(0, -100, -2000)  // FINISH!
+            new THREE.Vector3(0, -100, -2000),  // FINISH LINE!
+
+            // COOL-DOWN ZONE - Continue river beyond finish for 500m
+            new THREE.Vector3(-5, -100, -2100),
+            new THREE.Vector3(5, -100, -2200),
+            new THREE.Vector3(0, -100, -2300),
+            new THREE.Vector3(-8, -100, -2400),  // Start gentle curve
+            new THREE.Vector3(-12, -100, -2500)  // End - river curves behind canyon wall
         ];
 
         // NO transformations - waypoints used as-is

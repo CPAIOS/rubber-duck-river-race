@@ -45,7 +45,11 @@ const gameState = {
     // Paddle boost mechanic
     paddleBoost: 0, // Current paddle boost multiplier
     lastPaddleTime: 0, // Last time space was pressed for paddling
-    paddleTapCount: 0 // Number of recent taps
+    paddleTapCount: 0, // Number of recent taps
+    // 🏁 Duck Racing
+    position: 1, // Current race position
+    totalDucks: 2000, // Total ducks in race
+    duckNumber: null // Player's duck number
 };
 
 // Wave physics function - calculates wave height at any point
@@ -175,6 +179,26 @@ let eagleHasGrabbedDuck = false;
 let eagleGrabTime = 0; // Track when duck was grabbed
 let duckOriginalPosition = null;
 let eagleCirclePhase = 0; // Track circling animation
+
+// 🦅 Eagle swooping arc variables
+let eagleSwoopStartPos = null; // Starting position of swoop (high up)
+let eagleSwoopTargetX = 0; // Duck's X position when attack started
+let eagleSwoopTargetZ = 0; // Duck's Z position when attack started
+let eagleSwoopWaterLevel = 0; // Water level at attack point
+let eagleSwoopHasTouchedWater = false; // Track if eagle's claws hit water
+let eagleCommittedX = null; // X position eagle commits to (stops tracking after this)
+let eagleHasCommitted = false; // Has eagle committed to attack lane?
+
+// 🦆 Duck dramatic fall variables
+let duckIsFalling = false; // Track if duck is in dramatic fall
+let duckFallVelocity = 0; // Vertical fall velocity
+let duckFallStartY = 0; // Y position where fall started
+
+// 🏁 Finish line cutscene variables
+let finishLineCutsceneActive = false;
+let finishLineCutsceneStartTime = 0;
+let finishLineCameraPosition = null;
+let originalCameraPosition = null;
 
 const createRealWater = () => {
     // Create MULTIPLE water sections for infinite river!
@@ -382,19 +406,9 @@ const createRiverBanks = () => {
 
 // Add realistic rock outcroppings and terrain details to river banks
 const addBankDetails = (leftBank, rightBank) => {
-    const textureLoader = new THREE.TextureLoader();
-
-    // Load rock textures
-    const rockColorMap = textureLoader.load(
-        'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rock_03/rock_03_diff_1k.jpg'
-    );
-    const rockNormalMap = textureLoader.load(
-        'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rock_03/rock_03_nor_gl_1k.jpg'
-    );
-
+    // Simple rock material - no external textures needed
     const rockMaterial = new THREE.MeshStandardMaterial({
-        map: rockColorMap,
-        normalMap: rockNormalMap,
+        color: 0x8B7355, // Brown-grey rock color
         roughness: 0.95,
         metalness: 0.0
     });
@@ -587,23 +601,9 @@ const addClouds = () => {
 
 // Add 3D trees, rocks, and natural scenery
 const addVegetation = () => {
-    const textureLoader = new THREE.TextureLoader();
-
-    // Load rock textures
-    const rockColorMap = textureLoader.load(
-        'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rock_03/rock_03_diff_1k.jpg'
-    );
-    const rockNormalMap = textureLoader.load(
-        'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rock_03/rock_03_nor_gl_1k.jpg'
-    );
-
-    [rockColorMap, rockNormalMap].forEach(tex => {
-        tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-    });
-
+    // Simple rock material - no external textures needed
     const rockMaterial = new THREE.MeshStandardMaterial({
-        map: rockColorMap,
-        normalMap: rockNormalMap,
+        color: 0x8B7355, // Brown-grey rock color
         roughness: 0.9,
         metalness: 0.0
     });
@@ -729,17 +729,9 @@ const createTree = () => {
 const createRockCluster = () => {
     const rockGroup = new THREE.Group();
 
-    const textureLoader = new THREE.TextureLoader();
-    const rockColorMap = textureLoader.load(
-        'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rock_03/rock_03_diff_1k.jpg'
-    );
-    const rockNormalMap = textureLoader.load(
-        'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rock_03/rock_03_nor_gl_1k.jpg'
-    );
-
+    // Simple rock material - no external textures needed
     const rockMaterial = new THREE.MeshStandardMaterial({
-        map: rockColorMap,
-        normalMap: rockNormalMap,
+        color: 0x8B7355, // Brown-grey rock color
         roughness: 0.95,
         metalness: 0.0
     });
@@ -960,28 +952,97 @@ const updateSplashParticles = () => {
 };
 
 const loader = new GLTFLoader();
-loader.load('Rubber Duck.glb', (gltf) => {
+loader.load('Rubber_Ducky_1111020056_texture.glb', (gltf) => {
     duckModel = gltf.scene;
 
-    // Scale down and rotate to look more duck-like
-    duckModel.scale.set(0.8, 0.8, 0.8);
-    duckModel.rotation.x = Math.PI; // Flip 180 degrees on X axis to fix upside-down model
-    duckModel.rotation.y = Math.PI; // Flip 180 degrees to face forward
-    duckModel.rotation.z = 0; // No roll
+    // DEBUG: Check model bounds
+    const box = new THREE.Box3().setFromObject(duckModel);
+    const size = box.getSize(new THREE.Vector3());
+    console.log(`📦 Duck model size: ${size.x.toFixed(2)} x ${size.y.toFixed(2)} x ${size.z.toFixed(2)}`);
 
-    // Enable shadows
+    // Scale and rotate new meshy.ai duck model
+    duckModel.scale.set(1.5, 1.5, 1.5); // Larger scale for better visibility
+    duckModel.rotation.x = 0;
+    duckModel.rotation.y = Math.PI; // Face forward (down the river)
+    duckModel.rotation.z = 0;
+
+    // DEBUG: Log what textures the model is trying to load
     duckModel.traverse((child) => {
         if (child.isMesh) {
             child.castShadow = true;
             child.receiveShadow = true;
+
+            if (child.material) {
+                console.log('🔍 Material:', child.material.name || 'unnamed');
+                if (child.material.map) console.log('  - Color map:', child.material.map.image?.src || 'embedded');
+                if (child.material.normalMap) console.log('  - Normal map:', child.material.normalMap.image?.src || 'embedded');
+                if (child.material.roughnessMap) console.log('  - Roughness map:', child.material.roughnessMap.image?.src || 'embedded');
+            }
         }
     });
 
     duckModelLoaded = true;
-    console.log('Rubber duck model loaded successfully!');
+    console.log('✅ New meshy.ai rubber duck model loaded successfully!');
+
+    // If duck already exists (was created with fallback), replace it with the real model
+    if (duck) {
+        const oldPosition = duck.position.clone();
+        const oldRotation = duck.rotation.clone();
+        scene.remove(duck);
+        duck = createDuck();
+        duck.position.copy(oldPosition);
+        duck.rotation.copy(oldRotation);
+        scene.add(duck);
+        console.log('🔄 Replaced fallback duck with new model');
+    }
 }, undefined, (error) => {
-    console.error('Error loading duck model:', error);
+    console.error('❌ Error loading new duck model:', error);
 });
+
+// Add race number badge to duck
+const addNumberBadgeToDuck = (duckGroup, number) => {
+    // Find the duck model in the group
+    const duckModel = duckGroup.children[0];
+    if (!duckModel) return;
+
+    // Remove old badge if exists
+    const oldBadge = duckModel.getObjectByName('numberBadge');
+    if (oldBadge) {
+        duckModel.remove(oldBadge);
+    }
+
+    // Create canvas with number
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+
+    // Draw number on canvas
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, 256, 256);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = 'bold 120px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(number.toString(), 128, 128);
+
+    // Create texture from canvas
+    const numberTexture = new THREE.CanvasTexture(canvas);
+    const numberMaterial = new THREE.MeshBasicMaterial({
+        map: numberTexture,
+        transparent: false
+    });
+
+    // Create number badge (flat rectangle)
+    const badgeGeometry = new THREE.PlaneGeometry(0.8, 0.8);
+    const numberBadge = new THREE.Mesh(badgeGeometry, numberMaterial);
+    numberBadge.name = 'numberBadge';
+    numberBadge.position.set(0, 1.2, 0.8); // On duck's back/side
+    numberBadge.rotation.y = Math.PI; // Face backward so camera can see it
+    duckModel.add(numberBadge);
+
+    console.log(`🔢 Added race number #${number} to duck`);
+};
 
 // Create rubber duck
 const createDuck = () => {
@@ -990,7 +1051,7 @@ const createDuck = () => {
     // Use 3D model if loaded, otherwise fallback to procedural duck
     if (duckModelLoaded && duckModel) {
         const duckClone = duckModel.clone();
-        duckClone.position.set(0, 0, 0);
+        duckClone.position.set(0, 0.5, 0); // Raise duck up by 0.5 units
         duckGroup.add(duckClone);
     } else {
         // Fallback procedural duck
@@ -1153,14 +1214,30 @@ const createStick = (lane, z) => {
 const createRock = (lane, z) => {
     const rockGroup = new THREE.Group();
 
-    // Visible rocks - size 2 (good visibility without being too large)
-    const rockGeometry = new THREE.DodecahedronGeometry(2, 0);
+    // Varied size (0.8 to 2.5)
+    const rockSize = 0.8 + Math.random() * 1.7;
+
+    // Varied shapes - dodecahedron, icosahedron, or sphere
+    let rockGeometry;
+    const shapeType = Math.random();
+    if (shapeType < 0.33) {
+        rockGeometry = new THREE.DodecahedronGeometry(rockSize, 0);
+    } else if (shapeType < 0.66) {
+        rockGeometry = new THREE.IcosahedronGeometry(rockSize, 0);
+    } else {
+        rockGeometry = new THREE.SphereGeometry(rockSize, 6, 5);
+    }
+
+    // Varied colors - greys and browns
+    const colorOptions = [0x808080, 0x696969, 0x4a4a4a, 0x5a4a3a, 0x6b5d4f];
+    const rockColor = colorOptions[Math.floor(Math.random() * colorOptions.length)];
+
     const rockMaterial = new THREE.MeshStandardMaterial({
-        color: 0x808080, // Bright grey - working version color
-        roughness: 0.9
+        color: rockColor,
+        roughness: 0.85 + Math.random() * 0.15
     });
     const rock = new THREE.Mesh(rockGeometry, rockMaterial);
-    rock.position.y = 2; // Raised to stick out of water
+    rock.position.y = 0.3; // Lower - just peeking out of water
     rock.castShadow = true;
     rock.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
     rockGroup.add(rock);
@@ -2009,20 +2086,46 @@ const init = () => {
     // 🌊 BUILD THE CURVED RIVER!
     createCurvedRiverChannel();
 
-    // 🏁 FINISH LINE - Giant visible marker at 2000m
+    // 🏁 FINISH LINE - Checkered banner at 2000m
     const finishT = splinePath.distanceToT(2000);
     const finishPos = splinePath.getPointAt(finishT);
 
-    const finishGeometry = new THREE.BoxGeometry(40, 20, 5);
-    const finishMaterial = new THREE.MeshStandardMaterial({
-        color: 0xffff00,
-        emissive: 0xffff00,
-        emissiveIntensity: 0.5
-    });
-    const finishLine = new THREE.Mesh(finishGeometry, finishMaterial);
-    finishLine.position.set(0, finishPos.y + 10, finishPos.z);
-    scene.add(finishLine);
-    console.log(`✅ Finish line placed at z=${finishPos.z.toFixed(1)}, y=${finishPos.y.toFixed(1)}`);
+    // Create checkered finish line banner
+    const finishLineGroup = new THREE.Group();
+
+    // Banner support poles on each side
+    const poleGeometry = new THREE.CylinderGeometry(0.3, 0.3, 15, 8);
+    const poleMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff });
+
+    const leftPole = new THREE.Mesh(poleGeometry, poleMaterial);
+    leftPole.position.set(-17, finishPos.y + 7.5, finishPos.z);
+    scene.add(leftPole);
+
+    const rightPole = new THREE.Mesh(poleGeometry, poleMaterial);
+    rightPole.position.set(17, finishPos.y + 7.5, finishPos.z);
+    scene.add(rightPole);
+
+    // Checkered banner (8x4 grid of black and white squares)
+    const squareSize = 2;
+    for (let row = 0; row < 4; row++) {
+        for (let col = 0; col < 17; col++) {
+            const isBlack = (row + col) % 2 === 0;
+            const squareGeometry = new THREE.PlaneGeometry(squareSize, squareSize);
+            const squareMaterial = new THREE.MeshStandardMaterial({
+                color: isBlack ? 0x000000 : 0xffffff,
+                side: THREE.DoubleSide
+            });
+            const square = new THREE.Mesh(squareGeometry, squareMaterial);
+            square.position.set(
+                -17 + (col * squareSize) + squareSize/2,
+                finishPos.y + 15 - (row * squareSize) - squareSize/2,
+                finishPos.z
+            );
+            finishLineGroup.add(square);
+        }
+    }
+    scene.add(finishLineGroup);
+    console.log(`✅ Checkered finish line banner placed at z=${finishPos.z.toFixed(1)}, y=${finishPos.y.toFixed(1)}`);
 
     // Initialize duck on the spline
     duck = createDuck();
@@ -2085,6 +2188,16 @@ const init = () => {
     eagleHasGrabbedDuck = false;
     eagleGrabTime = 0;
     duckOriginalPosition = null;
+    eagleSwoopStartPos = null;
+    eagleSwoopTargetX = 0;
+    eagleSwoopTargetZ = 0;
+    eagleSwoopWaterLevel = 0;
+    eagleSwoopHasTouchedWater = false;
+    eagleCommittedX = null;
+    eagleHasCommitted = false;
+    duckIsFalling = false;
+    duckFallVelocity = 0;
+    duckFallStartY = 0;
 
     loader.load('Golden eagle.glb', (gltf) => {
         eagle = gltf.scene;
@@ -2253,6 +2366,15 @@ const init = () => {
 // Start game
 const startGame = () => {
     console.log('🎮 Starting game...');
+
+    // Get duck number from input (or random if blank)
+    const duckNumberInput = document.getElementById('duckNumber');
+    const inputValue = duckNumberInput ? parseInt(duckNumberInput.value) : null;
+    gameState.duckNumber = (inputValue && inputValue >= 1 && inputValue <= 9999)
+        ? inputValue
+        : Math.floor(Math.random() * 9999) + 1;
+    console.log(`🦆 Player duck #${gameState.duckNumber}`);
+
     gameState.isPlaying = true;
     gameState.health = 100;
     gameState.distance = 0;
@@ -2261,6 +2383,7 @@ const startGame = () => {
     gameState.duckPosition = 0;
     gameState.splineT = 0; // Start at beginning of course
     gameState.level = 1; // RESET level
+    gameState.position = 1; // Start in 1st place
     gameState.duckVelocityY = 0; // RESET vertical velocity
     gameState.jumpHeight = 0; // RESET jump
     gameState.isJumping = false; // RESET jump state
@@ -2275,6 +2398,16 @@ const startGame = () => {
     eagleGrabTime = 0;
     duckOriginalPosition = null;
     eagleCirclePhase = 0;
+    eagleSwoopStartPos = null;
+    eagleSwoopTargetX = 0;
+    eagleSwoopTargetZ = 0;
+    eagleSwoopWaterLevel = 0;
+    eagleSwoopHasTouchedWater = false;
+    eagleCommittedX = null;
+    eagleHasCommitted = false;
+    duckIsFalling = false;
+    duckFallVelocity = 0;
+    duckFallStartY = 0;
     if (eagle) {
         const eagleTriggerT = splinePath.distanceToT(950);
         const eagleTriggerPos = splinePath.getPointAt(eagleTriggerT);
@@ -2282,6 +2415,12 @@ const startGame = () => {
         eagle.rotation.set(0, Math.PI / 4, 0);
         console.log('🦅 Eagle reset to starting position');
     }
+
+    // Reset finish line cutscene
+    finishLineCutsceneActive = false;
+    finishLineCutsceneStartTime = 0;
+    finishLineCameraPosition = null;
+    originalCameraPosition = null;
 
     console.log('✅ Game state reset');
 
@@ -2292,6 +2431,11 @@ const startGame = () => {
     duck.rotation.x = 0;
     duck.rotation.z = 0;
     console.log(`🦆 Duck reset to: x=${duck.position.x.toFixed(1)}, y=${duck.position.y.toFixed(1)}, z=${duck.position.z.toFixed(1)}, waterLevel=${startPos.y.toFixed(1)}`);
+
+    // Add race number badge to duck
+    if (gameState.duckNumber && duckModelLoaded) {
+        addNumberBadgeToDuck(duck, gameState.duckNumber);
+    }
 
     // Clear existing obstacles
     obstacles.forEach(obstacle => scene.remove(obstacle));
@@ -2322,7 +2466,8 @@ const endGame = () => {
 
 // Update HUD
 const updateHUD = () => {
-    document.getElementById('level').textContent = gameState.level;
+    document.getElementById('position').textContent = gameState.position || 1;
+    document.getElementById('totalDucks').textContent = gameState.totalDucks || 2000;
     document.getElementById('health').textContent = Math.max(0, Math.floor(gameState.health));
     document.getElementById('distance').textContent = Math.floor(gameState.distance);
     document.getElementById('score').textContent = gameState.score;
@@ -2418,8 +2563,8 @@ const gameLoop = () => {
             }
         }
 
-        // Skip duck physics if eagle has grabbed the duck
-        if (!eagleHasGrabbedDuck) {
+        // Skip duck physics if eagle has grabbed the duck OR duck is in dramatic fall
+        if (!eagleHasGrabbedDuck && !duckIsFalling) {
         if (gameState.isJumping) {
             // Jump physics
             gameState.jumpHeight += gameState.jumpVelocity;
@@ -2491,6 +2636,81 @@ const gameLoop = () => {
         }
         } // End if (!eagleHasGrabbedDuck) - duck physics
 
+        // 🦆💧 DRAMATIC FALL FROM EAGLE DROP
+        if (duckIsFalling) {
+            // Apply gravity - accelerate downward
+            duckFallVelocity -= 0.8; // Gravity acceleration
+
+            // Update duck Y position
+            duck.position.y += duckFallVelocity;
+
+            // Debug log
+            if (Math.floor(Date.now() / 100) % 5 === 0) {
+                console.log(`💧 Falling: y=${duck.position.y.toFixed(1)}, velocity=${duckFallVelocity.toFixed(2)}, health=${gameState.health}`);
+            }
+
+            // Get current water level
+            const currentT = splinePath.distanceToT(gameState.distance);
+            const currentPos = splinePath.getPointAt(currentT);
+            const waterLevel = currentPos.y;
+
+            // Check if duck hits water
+            if (duck.position.y <= waterLevel + 0.2) {
+                // SPLASH WITH BOUNCE!
+                duck.position.y = waterLevel + 0.2;
+
+                const fallDistance = duckFallStartY - waterLevel;
+                console.log(`💦💦💦 SPLASH! Duck fell ${fallDistance.toFixed(1)} units and BOUNCES out of the water!`);
+
+                // Create MASSIVE DRAMATIC splash
+                for (let i = 0; i < 25; i++) {
+                    // Create much larger splash particles
+                    const geometry = new THREE.SphereGeometry(0.3 + Math.random() * 0.4, 6, 6); // MUCH bigger!
+                    const material = new THREE.MeshBasicMaterial({
+                        color: 0xFFFFFF,
+                        transparent: true,
+                        opacity: 0.9
+                    });
+                    const particle = new THREE.Mesh(geometry, material);
+
+                    particle.position.set(
+                        duck.position.x + (Math.random() - 0.5) * 5,
+                        waterLevel + Math.random() * 2,
+                        duck.position.z + (Math.random() - 0.5) * 5
+                    );
+
+                    // Explosive velocity upward and outward
+                    particle.userData.velocity = {
+                        x: (Math.random() - 0.5) * 1.5,
+                        y: 0.5 + Math.random() * 1.0, // Launch upward!
+                        z: (Math.random() - 0.5) * 1.5
+                    };
+                    particle.userData.life = 1.5; // Longer life
+
+                    scene.add(particle);
+                    splashParticles.push(particle);
+                }
+
+                // Apply damage (50% of original values for rubber duck!)
+                const eagleGrabDamage = 15; // Was 30, now 15 (50%)
+                const fallDamage = Math.min(15, Math.floor(fallDistance * 0.15)); // Cap at 15 (50% of 30)
+                const totalDamage = eagleGrabDamage + fallDamage;
+
+                gameState.health -= totalDamage;
+                console.log(`💥 Eagle grab (${eagleGrabDamage}) + fall damage (${fallDamage}) = ${totalDamage} total! Health: ${gameState.health}`);
+
+                // RUBBER DUCK BOUNCES! Reverse velocity with damping
+                duckFallVelocity = Math.abs(duckFallVelocity) * 0.5; // Bounce up with 50% energy
+                gameState.isJumping = true; // Treat bounce as a jump
+                gameState.jumpHeight = 2; // Start at 2 units above water
+                gameState.jumpVelocity = duckFallVelocity; // Use bounce velocity
+
+                duckIsFalling = false; // Exit falling state
+
+                console.log(`🦆 BOUNCE! Duck springs back up with velocity ${duckFallVelocity.toFixed(2)}`);
+            }
+        }
+
         // Update splash particles
         updateSplashParticles();
 
@@ -2521,17 +2741,34 @@ const gameLoop = () => {
         const deltaT = actualSpeed / splinePath.totalLength;
         gameState.splineT += deltaT;
 
-        // Clamp to end of course - END IMMEDIATELY when finish line is crossed!
-        if (gameState.splineT >= 1.0) {
-            gameState.splineT = 1.0;
-            if (gameState.isPlaying) {
-                console.log('🏁 FINISH LINE REACHED!');
-                console.log(`🎉 VICTORY! Final Score: ${gameState.score} | Distance: ${gameState.distance.toFixed(0)}m | Health: ${gameState.health}%`);
+        // TRIGGER CUTSCENE at 1950m (50m before finish line)
+        if (gameState.distance >= 1950 && gameState.isPlaying && !finishLineCutsceneActive) {
+            console.log('🏁 APPROACHING FINISH LINE! Starting cutscene...');
 
-                gameState.isPlaying = false; // Stop game loop updates
-                endGame(); // End IMMEDIATELY - no delay!
-                return; // Stop processing this frame immediately
-            }
+            // Trigger finish line cutscene
+            finishLineCutsceneActive = true;
+            finishLineCutsceneStartTime = Date.now();
+
+            // Store original camera position
+            originalCameraPosition = camera.position.clone();
+
+            // Set camera ahead of duck at finish line, facing backward to see duck approach
+            const finishT = splinePath.distanceToT(2000);
+            const finishPos = splinePath.getPointAt(finishT);
+            finishLineCameraPosition = new THREE.Vector3(
+                0, // Center of river
+                finishPos.y + 5, // Just above water level
+                finishPos.z - 15 // 15 units ahead of finish line
+            );
+        }
+
+        // END GAME at 2100m (100m after finish line for cool-down float)
+        if (gameState.distance >= 2100 && gameState.isPlaying) {
+            console.log(`🎉 VICTORY! Final Score: ${gameState.score} | Distance: ${gameState.distance.toFixed(0)}m | Health: ${gameState.health}%`);
+            gameState.isPlaying = false;
+            finishLineCutsceneActive = false;
+            endGame();
+            return;
         }
 
         // Get current position on spline
@@ -2571,7 +2808,8 @@ const gameLoop = () => {
 
         // ===== DROP PHYSICS - WORKS FOR ALL DROPS NOW! =====
         // Track if we just started falling on this drop (for one-time damage)
-        if (isFalling && duck.position.y > currentWaterLevel + gameState.baseHeight + 2) {
+        // BUT: Skip ALL drop physics if eagle has grabbed duck or duck is in dramatic fall!
+        if (!eagleHasGrabbedDuck && !duckIsFalling && isFalling && duck.position.y > currentWaterLevel + gameState.baseHeight + 2) {
             // Duck is ABOVE the water, actively falling!
 
             // Apply damage once when first going over ANY drop (waterfall damage always applies!)
@@ -2584,7 +2822,7 @@ const gameLoop = () => {
                     gameState.score += 50; // Bonus for perfect jump
                 } else {
                     const dropSize = Math.abs(slope) * 30; // Estimate drop height
-                    const damage = Math.min(30, Math.floor(dropSize));
+                    const damage = Math.min(15, Math.floor(dropSize * 0.5)); // 50% damage for rubber duck! Cap at 15
                     console.log(`💦 WATERFALL DAMAGE! Fell ${dropSize.toFixed(0)}ft - ${damage} damage! Distance: ${gameState.distance.toFixed(0)}m, Health: ${gameState.health} -> ${gameState.health - damage}`);
                     gameState.health -= damage;
                 }
@@ -2607,8 +2845,8 @@ const gameLoop = () => {
 
                 if (Math.random() < 0.05) console.log(`🌊 FALLING! y=${duck.position.y.toFixed(1)}`);
             }
-        } else if (!isFalling && duck.position.y <= currentWaterLevel + gameState.baseHeight) {
-            // Duck safely on water - reset everything
+        } else if (!eagleHasGrabbedDuck && !duckIsFalling && !isFalling && duck.position.y <= currentWaterLevel + gameState.baseHeight) {
+            // Duck safely on water - reset everything (but NOT if eagle has it or dramatic fall!)
             duck.position.y = currentWaterLevel + gameState.baseHeight;
             duck.rotation.x = 0;
             gameState.duckVelocityY = 0;
@@ -2617,12 +2855,20 @@ const gameLoop = () => {
             gameState.hasTakenWaterfallDamage = false;
         }
 
-        // Camera follows duck - adjusted for river view AND elevation
-        camera.position.x = duck.position.x; // Follow duck's X position
-        camera.position.z = duck.position.z + 18; // Camera behind duck
-        // Reduced minimum from 20 to -60 so camera follows duck down the drops more closely
-        camera.position.y = Math.max(-60, duck.position.y + 16);
-        camera.lookAt(duck.position.x, duck.position.y + 2, duck.position.z - 10); // Look ahead
+        // 🏁 FINISH LINE CUTSCENE - Camera switches to front view
+        if (finishLineCutsceneActive) {
+            // Position camera ahead of duck, looking back to see front of duck
+            camera.position.copy(finishLineCameraPosition);
+            camera.lookAt(duck.position.x, duck.position.y + 1, duck.position.z);
+            // Cutscene continues until duck reaches 2100m (cool-down zone end)
+        } else {
+            // Normal camera follows duck - adjusted for river view AND elevation
+            camera.position.x = duck.position.x; // Follow duck's X position
+            camera.position.z = duck.position.z + 18; // Camera behind duck
+            // Reduced minimum from 20 to -60 so camera follows duck down the drops more closely
+            camera.position.y = Math.max(-60, duck.position.y + 16);
+            camera.lookAt(duck.position.x, duck.position.y + 2, duck.position.z - 10); // Look ahead
+        }
 
         // DISABLED: Moving terrain walls (causing performance issues and visual problems)
         // if (leftRiverbank && rightRiverbank) {
@@ -2635,24 +2881,51 @@ const gameLoop = () => {
 
         // Old river segment code removed - using real 3D water now
 
-        // Spawn logs - 1% spawn rate
-        const spawnRate = 0.01; // 1% chance per frame
-        const activeLogs = obstacles.filter(o => o.userData.type === 'log').length;
-        if (Math.random() < spawnRate && activeLogs < 10) { // Max 10 LOGS only (not counting rocks/trees)
+        // Spawn obstacles - 2% chance per frame (logs and rocks)
+        const spawnRate = 0.02;
+        const activeDynamicObstacles = obstacles.filter(o => o.userData.type === 'log' || o.userData.type === 'rock').length;
+        if (Math.random() < spawnRate && activeDynamicObstacles < 15) {
             const spawnZ = camera.position.z - 80;
-            let obstacle;
-
-            // Calculate water level at spawn position based on spline
             const spawnDistance = Math.abs(spawnZ);
-            const spawnT = splinePath.distanceToT(spawnDistance);
-            const spawnWaterLevel = splinePath.getPointAt(spawnT).y;
 
-            // Spawn logs at correct elevation
-            const lane = (Math.random() - 0.5) * 10; // Narrower lane range
-            obstacle = createLog(lane, spawnZ, spawnWaterLevel);
+            // Waterfall drop zones - don't spawn near edges
+            const dropZones = [
+                {start: 190, end: 270},   // Drop 1 buffer
+                {start: 390, end: 470},   // Drop 2 buffer
+                {start: 590, end: 670},   // Drop 3 buffer
+                {start: 790, end: 870},   // Drop 4 buffer
+                {start: 990, end: 1070},  // Drop 5 buffer
+                {start: 1190, end: 1270}, // Drop 6 buffer
+                {start: 1390, end: 1480}  // Drop 7 buffer
+            ];
 
-            obstacles.push(obstacle);
-            scene.add(obstacle);
+            // Check if spawn position is in a drop zone
+            const inDropZone = dropZones.some(zone =>
+                spawnDistance >= zone.start && spawnDistance <= zone.end
+            );
+
+            if (!inDropZone) {
+                const lane = (Math.random() - 0.5) * 10; // Narrower lane range
+                let obstacle;
+
+                // Calculate water level at spawn position based on spline
+                const spawnT = splinePath.distanceToT(spawnDistance);
+                const spawnWaterLevel = splinePath.getPointAt(spawnT).y;
+
+                // Random obstacle type - 50% logs, 50% rocks
+                const obstacleType = Math.random();
+                if (obstacleType < 0.5) {
+                    // Spawn log
+                    obstacle = createLog(lane, spawnZ, spawnWaterLevel);
+                } else {
+                    // Spawn rock
+                    obstacle = createRock(lane, spawnZ);
+                    obstacle.position.y = spawnWaterLevel; // Set to water level
+                }
+
+                obstacles.push(obstacle);
+                scene.add(obstacle);
+            }
         }
 
         // Spawn trees and rocks along river banks continuously
@@ -2782,16 +3055,17 @@ const gameLoop = () => {
                 }
             }
 
-            // UPDATE LOG Y POSITIONS - logs should follow water elevation on drops
-            if (obstacle.userData && obstacle.userData.type === 'log') {
-                const logDistance = Math.abs(obstacle.position.z);
-                const logT = splinePath.distanceToT(logDistance);
-                const logWaterLevel = splinePath.getPointAt(logT).y;
-                // Update Y to current water level at this Z position
-                obstacle.position.y = logWaterLevel + 0.2; // +0.2 to float on surface
+            // UPDATE LOG AND ROCK Y POSITIONS - directly set to water level
+            if (obstacle.userData && (obstacle.userData.type === 'log' || obstacle.userData.type === 'rock')) {
+                const obstacleDistance = Math.abs(obstacle.position.z);
+                const obstacleT = splinePath.distanceToT(obstacleDistance);
+                const waterLevel = splinePath.getPointAt(obstacleT).y;
 
-                // Slow rotation in water
-                if (obstacle.userData.rotationSpeed) {
+                // Directly set Y to water level - no falling physics
+                obstacle.position.y = waterLevel + (obstacle.userData.type === 'log' ? 0.2 : 0);
+
+                // Slow rotation in water for logs
+                if (obstacle.userData.type === 'log' && obstacle.userData.rotationSpeed) {
                     obstacle.rotation.z += obstacle.userData.rotationSpeed;
                 }
             }
@@ -2831,8 +3105,8 @@ const gameLoop = () => {
                     gameState.duckAngularVelX += (Math.random() - 0.5) * turbulence * 0.02;
                     gameState.duckAngularVelZ += (Math.random() - 0.5) * turbulence * 0.03;
 
-                    // Gradual damage from rough water - only 2% chance per frame
-                    if (Math.random() < 0.02) {
+                    // Gradual damage from rough water - only 1% chance per frame (50% less frequent)
+                    if (Math.random() < 0.01) {
                         gameState.health -= 1;
                     }
                 }
@@ -2846,7 +3120,7 @@ const gameLoop = () => {
                     const dropHeight = obstacle.userData.dropHeight;
 
                     gameState.duckVelocityY = -2.0; // Big downward velocity
-                    gameState.health -= obstacle.userData.damage;
+                    gameState.health -= Math.floor((obstacle.userData.damage || 0) * 0.5); // 50% for rubber duck!
 
                     // Spin the duck!
                     gameState.duckAngularVelX += 0.2;
@@ -2861,8 +3135,8 @@ const gameLoop = () => {
             if (gameState.startGracePeriod === 0 && checkCollision(duck, obstacle)) {
                 if (obstacle.userData.type === 'rapids' || obstacle.userData.type === 'shader_rapids') {
                     // Rapids already handled above with physics
-                    // Extra damage if you hit a rock
-                    gameState.health -= obstacle.userData.damage || 15;
+                    // Extra damage if you hit a rock (50% for rubber duck!)
+                    gameState.health -= Math.floor((obstacle.userData.damage || 15) * 0.5);
                     gameState.score -= 20;
                 } else if (obstacle.userData.type === 'shader_waterfall') {
                     // Waterfall already handled above
@@ -2871,7 +3145,7 @@ const gameLoop = () => {
                     const isHighEnough = gameState.jumpHeight > 1.5;
 
                     if (!isHighEnough) {
-                        gameState.health -= obstacle.userData.damage || 10;
+                        gameState.health -= Math.floor((obstacle.userData.damage || 10) * 0.5); // 50% for rubber duck!
                         gameState.score -= 50;
 
                         // Remove obstacle after collision
@@ -2928,65 +3202,158 @@ const gameLoop = () => {
         if (eagle && !eagleHasAttacked && gameState.distance >= 1000 && gameState.distance < 1100) {
             eagleHasAttacked = true;
             eagleAttackTime = Date.now();
-            console.log(`🦅💨 EAGLE DIVING! DODGE NOW!`);
+
+            // Position eagle high and IN FRONT for visible approach (Level 1 - fair warning!)
+            const currentT = splinePath.distanceToT(gameState.distance);
+            const currentPos = splinePath.getPointAt(currentT);
+
+            // Start eagle WAY IN FRONT and HIGH so player can see it coming!
+            eagleSwoopStartPos = new THREE.Vector3(
+                duck.position.x - 8,  // Slightly to the side
+                currentPos.y + 40,    // 40 units high (very visible)
+                duck.position.z - 100  // 100 units IN FRONT - very visible!
+            );
+            eagle.position.copy(eagleSwoopStartPos);
+
+            console.log(`🦅 Eagle positioned at z=${eagle.position.z.toFixed(1)}, Duck at z=${duck.position.z.toFixed(1)}, Diff=${(duck.position.z - eagle.position.z).toFixed(1)}`);
+
+            // Lock target to duck's starting X position
+            eagleSwoopTargetX = duck.position.x;
+            eagleSwoopTargetZ = duck.position.z;
+
+            // Get water level at attack point
+            eagleSwoopWaterLevel = currentPos.y;
+            eagleSwoopHasTouchedWater = false;
+            eagleCommittedX = null; // Reset commitment
+            eagleHasCommitted = false; // Reset commitment flag
+
+            console.log(`🦅💨 EAGLE APPROACHING! Watch for it to commit to an attack lane, then DODGE!`);
         }
 
         if (eagle && eagleHasAttacked) {
             const elapsed = (Date.now() - eagleAttackTime) / 1000; // seconds
+            const swoopDuration = 1.5; // Fast swoop - 1.5 seconds
 
-            if (!eagleHasGrabbedDuck && elapsed < 8) {
-                // SWOOP DOWN towards duck (VERY SLOW for Level 1 - easy to dodge)
-                const targetX = duck.position.x;
-                const targetY = duck.position.y + 3; // Just above duck
+            if (!eagleHasGrabbedDuck && elapsed < swoopDuration) {
+                // 🦅 SWOOPING ARC ANIMATION - AGGRESSIVE dive toward duck!
+                const progress = elapsed / swoopDuration; // 0 to 1
+
+                // COMMITMENT MECHANIC - Level 1: commits at 25% through swoop (early = easier)
+                const commitmentThreshold = 0.25; // Commits 25% through (adjust for difficulty)
+
+                if (!eagleHasCommitted && progress >= commitmentThreshold) {
+                    // EAGLE COMMITS TO ATTACK LANE!
+                    eagleHasCommitted = true;
+                    eagleCommittedX = eagle.position.x; // Lock current X position
+                    console.log(`🦅🎯 EAGLE COMMITS TO ATTACK! Lane X=${eagleCommittedX.toFixed(1)} - DODGE NOW!`);
+                }
+
+                // Target positions
+                const targetY = duck.position.y; // Duck's actual Y
                 const targetZ = duck.position.z;
 
-                // VERY SLOW swoop - 4% per frame (super easy to dodge for Level 1)
-                eagle.position.x += (targetX - eagle.position.x) * 0.04;
-                eagle.position.y += (targetY - eagle.position.y) * 0.04;
-                eagle.position.z += (targetZ - eagle.position.z) * 0.04;
+                // X position: Track duck UNTIL commitment, then dive straight
+                if (!eagleHasCommitted) {
+                    // TRACKING PHASE - follows your movement
+                    const targetX = duck.position.x;
+                    eagle.position.x += (targetX - eagle.position.x) * 0.25;
+                } else {
+                    // COMMITTED PHASE - dives straight in locked lane!
+                    eagle.position.x = eagleCommittedX; // Stay in committed lane
+                }
 
-                // Animate wings (simple rotation)
-                eagle.rotation.z = Math.sin(elapsed * 10) * 0.3;
+                // Z position: VERY FAST BACKWARD dive toward duck (coming from front!)
+                eagle.position.z += (targetZ - eagle.position.z) * 0.35;
 
-                // Point eagle towards duck
-                eagle.lookAt(duck.position);
+                // Y position: Aggressive dive down
+                // First half (0 to 0.5): Dive down from start height to water level
+                // Second half (0.5 to 1.0): Pull back up
+                const startY = eagleSwoopStartPos.y;
+                const waterY = eagleSwoopWaterLevel;
 
-                // Check if eagle grabs duck
+                if (progress < 0.5) {
+                    // Diving down - progress 0→0.5 means startY→waterY
+                    const diveProgress = progress * 2; // 0→1
+                    eagle.position.y = startY + (waterY - startY) * diveProgress;
+                } else {
+                    // Pulling back up - progress 0.5→1 means waterY→startY
+                    const pullUpProgress = (progress - 0.5) * 2; // 0→1
+                    eagle.position.y = waterY + (startY - waterY) * pullUpProgress;
+                }
+
+                // Debug: Log eagle and duck positions every 0.3 seconds
+                if (Math.floor(elapsed / 0.3) !== Math.floor((elapsed - 0.016) / 0.3)) {
+                    const distToD = eagle.position.distanceTo(duck.position);
+                    console.log(`🦅 Swoop: prog=${(progress*100).toFixed(0)}% | Eagle: (${eagle.position.x.toFixed(1)}, ${eagle.position.y.toFixed(1)}, ${eagle.position.z.toFixed(1)}) | Duck: (${duck.position.x.toFixed(1)}, ${duck.position.y.toFixed(1)}, ${duck.position.z.toFixed(1)}) | Dist: ${distToD.toFixed(1)}`);
+                }
+
+                // Eagle tilts forward during dive
+                const diveAngle = Math.sin(progress * Math.PI) * 0.8; // Tilts down during middle of swoop
+                eagle.rotation.x = -diveAngle; // Pitch forward
+                eagle.rotation.z = Math.sin(elapsed * 10) * 0.2; // Wing flap
+
+                // Point eagle towards target
+                eagle.lookAt(duck.position.x, targetY, targetZ);
+
+                // Check if eagle's claws touch water (at lowest point)
+                if (progress > 0.4 && progress < 0.6 && !eagleSwoopHasTouchedWater) {
+                    if (eagle.position.y - eagleSwoopWaterLevel < 1.5) {
+                        eagleSwoopHasTouchedWater = true;
+                        // Create water splash effect
+                        console.log('💦 Eagle\'s claws touch the water! *SPLASH*');
+                        gameState.score += 100; // Bonus for making eagle miss!
+                    }
+                }
+
+                // Check if eagle grabs duck during swoop
                 const distToD = eagle.position.distanceTo(duck.position);
-                if (distToD < 5 && elapsed > 0.5) {
-                    // Check if player is DODGING (steering far from center)
-                    const duckOffsetFromCenter = Math.abs(duck.position.x);
-                    const isDodging = duckOffsetFromCenter > 3; // If 3+ units from center, they're dodging (SUPER EASY for Level 1)
+                if (distToD < 3.5) { // Within grab range (wider for visibility)
+                    // Check if player is DODGING (moved out of committed attack lane)
+                    let isDodging = false;
+                    if (eagleHasCommitted) {
+                        // After commitment, check if duck is out of the attack lane
+                        const duckOffsetFromLane = Math.abs(duck.position.x - eagleCommittedX);
+                        isDodging = duckOffsetFromLane > 3; // If 3+ units away from committed lane (easier!)
+                    }
 
                     if (isDodging) {
-                        // SUCCESSFUL DODGE!
-                        console.log('✨🦆 YOU DODGED THE EAGLE! Nice reflexes!');
-                        gameState.score += 500; // Bonus for dodging!
-                        // Eagle misses and flies away
-                        eagleHasAttacked = true; // Mark as done so it doesn't retry
-                        eagleAttackTime = Date.now() - 10; // Jump to fly-away phase
+                        // SUCCESSFUL DODGE! (but don't end swoop immediately, let it continue)
+                        if (!eagleSwoopHasTouchedWater) {
+                            console.log('✨🦆 YOU DODGED THE EAGLE! Nice reflexes!');
+                            gameState.score += 500; // Bonus for dodging!
+                            eagleSwoopHasTouchedWater = true; // Mark as dodged (reusing flag)
+                        }
                     } else {
                         // Eagle grabbed the duck!
                         eagleHasGrabbedDuck = true;
                         eagleGrabTime = Date.now(); // Start grab timer
                         duckOriginalPosition = duck.position.clone();
-                        gameState.health -= 30;
+                        // Don't apply damage yet - wait for the fall!
                         gameState.score -= 200;
-                        console.log('🦅💀 EAGLE HAS GRABBED THE DUCK! Carrying it away...');
+                        console.log(`🦅💀 EAGLE HAS GRABBED THE DUCK! Health: ${gameState.health} (no damage yet - will apply on splash)`);
                     }
                 }
+            } else if (!eagleHasGrabbedDuck && elapsed >= swoopDuration) {
+                // Swoop complete - Eagle flies away
+                if (!eagleSwoopHasTouchedWater) {
+                    console.log('🦅 Eagle completes swoop and flies away...');
+                }
+                eagleAttackTime = Date.now() - 10000; // Jump to fly-away phase
             } else if (eagleHasGrabbedDuck) {
                 const grabElapsed = (Date.now() - eagleGrabTime) / 1000; // Time since grab
 
                 if (grabElapsed < 3) {
-                    // CARRY DUCK AWAY - duck is attached to eagle
-                    // Duck dangles below eagle
+                    // CARRY DUCK AWAY - duck is attached to eagle's talons
+                    // Position duck in eagle's talons (very close, right underneath)
                     duck.position.x = eagle.position.x;
-                    duck.position.y = eagle.position.y - 3;
+                    duck.position.y = eagle.position.y - 1; // Only 1 unit below - in talons!
                     duck.position.z = eagle.position.z;
 
-                    // Fly FAST upward and away with the duck
-                    eagle.position.y += 1.2; // MUCH faster ascent (doubled from 0.6)
+                    // Fly FAST upward and away with the duck, but cap max height
+                    const maxCarryHeight = eagleSwoopWaterLevel + 60; // Only 60 units above water (not 240!)
+                    if (eagle.position.y < maxCarryHeight) {
+                        eagle.position.y += 1.2; // MUCH faster ascent
+                    }
                     eagle.position.x -= 0.4; // Move away horizontally
                     eagle.position.z -= 0.3; // Move away depth
 
@@ -2995,15 +3362,20 @@ const gameLoop = () => {
 
                     // Debug log every 30 frames (~0.5 seconds)
                     if (Math.floor(grabElapsed * 60) % 30 === 0) {
-                        console.log(`🦅 Carrying duck: eagle.y=${eagle.position.y.toFixed(1)}, duck.y=${duck.position.y.toFixed(1)}, elapsed=${grabElapsed.toFixed(1)}s`);
+                        console.log(`🦅 Carrying duck: eagle.y=${eagle.position.y.toFixed(1)}, duck.y=${duck.position.y.toFixed(1)}, elapsed=${grabElapsed.toFixed(1)}s, health=${gameState.health}`);
                     }
                 } else {
                     // DROP THE DUCK after carrying it for 3 seconds
                     eagleHasGrabbedDuck = false;
-                    console.log('🦅 Eagle drops the duck!');
-                    // Duck falls from height - will take waterfall damage
-                    gameState.jumpHeight = 0;
-                    gameState.jumpVelocity = -0.5; // Initial downward velocity
+                    eagleHasAttacked = true; // Mark attack as COMPLETE so eagle won't immediately retry
+                    eagleAttackTime = Date.now() - 20000; // Set time far in past to trigger fly-away phase
+
+                    // Start dramatic fall!
+                    duckIsFalling = true;
+                    duckFallVelocity = 0; // Start with zero velocity
+                    duckFallStartY = duck.position.y;
+
+                    console.log(`🦅 Eagle drops the duck from ${duck.position.y.toFixed(1)} units high! Watch it fall! Health: ${gameState.health}, isFalling: ${duckIsFalling}`);
 
                     // Eagle flies away
                     eagle.position.y += 0.5;
@@ -3017,9 +3389,14 @@ const gameLoop = () => {
             }
         }
 
-        // Check if health depleted
+        // Check if health depleted (but let dramatic fall finish first!)
         if (gameState.health <= 0) {
-            endGame();
+            if (duckIsFalling) {
+                console.log(`⚠️ Health is ${gameState.health} but duck is falling - waiting for splash...`);
+            } else {
+                console.log(`💀 Health depleted (${gameState.health}) - ending game`);
+                endGame();
+            }
         }
 
         updateHUD();
@@ -3045,7 +3422,17 @@ const gameLoop = () => {
         }
     });
 
-    renderer.render(scene, camera);
+    // Only render if game is playing or at low framerate for start screen
+    if (gameState.isPlaying) {
+        renderer.render(scene, camera);
+    } else {
+        // Render at 10 FPS on start screen to save performance
+        if (!gameLoop.lastStartScreenRender || Date.now() - gameLoop.lastStartScreenRender > 100) {
+            renderer.render(scene, camera);
+            gameLoop.lastStartScreenRender = Date.now();
+        }
+    }
+
     requestAnimationFrame(gameLoop);
 };
 
