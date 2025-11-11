@@ -3539,10 +3539,10 @@ const gameLoop = () => {
 
         // Old river segment code removed - using real 3D water now
 
-        // Spawn obstacles - 3% chance per frame (50% increase from 2%)
-        const spawnRate = 0.03;
+        // Spawn obstacles - 5% chance per frame (2.5x increase from 2%)
+        const spawnRate = 0.05;
         const activeDynamicObstacles = obstacles.filter(o => o.userData.type === 'log' || o.userData.type === 'rock').length;
-        if (Math.random() < spawnRate && activeDynamicObstacles < 20) { // Increased cap to 20
+        if (Math.random() < spawnRate && activeDynamicObstacles < 25) { // Increased cap to 25
             const spawnZ = camera.position.z - 80;
             const spawnDistance = Math.abs(spawnZ);
 
