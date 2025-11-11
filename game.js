@@ -2926,10 +2926,22 @@ const init = () => {
         context.fillStyle = '#ffffff';
         context.fillRect(0, 0, canvas.width, canvas.height);
 
-        context.fillStyle = '#000000';
-        context.font = 'bold 56px Arial';
+        // Stylized race banner font with outline
+        context.font = 'bold 64px Impact, "Arial Black", sans-serif';
         context.textAlign = 'center';
         context.textBaseline = 'middle';
+
+        // Add black outline for depth
+        context.strokeStyle = '#000000';
+        context.lineWidth = 8;
+        context.strokeText('Rubber Duck River Run', canvas.width / 2, canvas.height / 2);
+
+        // Fill with gradient for more style
+        const gradient = context.createLinearGradient(0, 0, 0, canvas.height);
+        gradient.addColorStop(0, '#1a5490'); // Deep blue
+        gradient.addColorStop(0.5, '#2d7dd2'); // Bright blue
+        gradient.addColorStop(1, '#1a5490'); // Deep blue
+        context.fillStyle = gradient;
         context.fillText('Rubber Duck River Run', canvas.width / 2, canvas.height / 2);
 
         const textTexture = new THREE.CanvasTexture(canvas);
