@@ -1273,15 +1273,23 @@ const createCompetitorDuck = (color, raceNumber) => {
     const skillRoll = Math.random();
     let aiSkill, baseSpeed, aiType;
 
-    if (skillRoll < 0.05) { // 5% Elite racers - THE REAL COMPETITION! (~7-8 ducks)
-        aiSkill = 'elite';
-        baseSpeed = 0.60 + Math.random() * 0.08; // 0.60-0.68 speed (challenging but beatable)
+    if (skillRoll < 0.013) { // 1.3% Ultra Elite - YOUR MAIN RIVALS! (~2 ducks)
+        aiSkill = 'ultra-elite';
+        baseSpeed = 0.66 + Math.random() * 0.04; // 0.66-0.70 speed (very close to your max!)
+        aiType = 'champion'; // The best of the best
+    } else if (skillRoll < 0.04) { // 2.7% Very Elite - TOUGH COMPETITION (~4 ducks)
+        aiSkill = 'very-elite';
+        baseSpeed = 0.62 + Math.random() * 0.04; // 0.62-0.66 speed (really fast)
         aiType = 'aggressive'; // Will try to stay ahead
-    } else if (skillRoll < 0.20) { // 15% Good racers (~22 ducks)
+    } else if (skillRoll < 0.10) { // 6% Semi-Elite - CHALLENGING PACK (~9 ducks)
+        aiSkill = 'semi-elite';
+        baseSpeed = 0.57 + Math.random() * 0.05; // 0.57-0.62 speed (challenging)
+        aiType = 'aggressive'; // Will try to stay ahead
+    } else if (skillRoll < 0.25) { // 15% Good racers (~22 ducks)
         aiSkill = 'good';
         baseSpeed = 0.50 + Math.random() * 0.10; // 0.50-0.60 speed
         aiType = 'competitive'; // Will speed up if behind
-    } else { // 80% Average racers (~120 ducks)
+    } else { // 75% Average racers (~113 ducks)
         aiSkill = 'average';
         baseSpeed = 0.28 + Math.random() * 0.22; // 0.28-0.50 speed
         aiType = 'casual'; // Steady pace
@@ -1416,16 +1424,30 @@ const updateCompetitorDucks = (deltaTime) => {
         // Move duck forward at current speed (same scale as player)
         duck.userData.distance += duck.userData.currentSpeed * deltaTime * 80; // Adjusted multiplier for competitive balance
 
-        // AI Steering logic - Elite ducks make faster decisions
-        const steerInterval = duck.userData.aiSkill === 'elite' ? 20 :
-                            duck.userData.aiSkill === 'good' ? 40 : 60;
+        // AI Steering logic - Elite tiers make faster, smarter decisions
+        let steerInterval;
+        if (duck.userData.aiSkill === 'ultra-elite') {
+            steerInterval = 15; // Ultra fast reactions
+        } else if (duck.userData.aiSkill === 'very-elite' || duck.userData.aiSkill === 'semi-elite') {
+            steerInterval = 20; // Fast reactions
+        } else if (duck.userData.aiSkill === 'good') {
+            steerInterval = 40;
+        } else {
+            steerInterval = 60;
+        }
 
         if (duck.userData.steerCooldown <= 0) {
             duck.userData.steerCooldown = steerInterval + Math.floor(Math.random() * 30);
 
-            // Elite AI: More strategic steering
-            if (duck.userData.aiSkill === 'elite') {
-                // 60% straight, 20% left, 20% right (more efficient)
+            // Elite AI tiers: More strategic steering
+            if (duck.userData.aiSkill === 'ultra-elite') {
+                // Ultra elite: 70% straight, 15% left, 15% right (most efficient)
+                const rand = Math.random();
+                if (rand < 0.70) duck.userData.steerDirection = 0;
+                else if (rand < 0.85) duck.userData.steerDirection = -1;
+                else duck.userData.steerDirection = 1;
+            } else if (duck.userData.aiSkill === 'very-elite' || duck.userData.aiSkill === 'semi-elite') {
+                // Very/Semi elite: 60% straight, 20% left, 20% right (efficient)
                 const rand = Math.random();
                 if (rand < 0.60) duck.userData.steerDirection = 0;
                 else if (rand < 0.80) duck.userData.steerDirection = -1;
@@ -1440,8 +1462,15 @@ const updateCompetitorDucks = (deltaTime) => {
         }
         duck.userData.steerCooldown--;
 
-        // Apply steering
-        const steerSpeed = duck.userData.aiSkill === 'elite' ? 0.06 : 0.08;
+        // Apply steering - elite tiers steer more precisely
+        let steerSpeed;
+        if (duck.userData.aiSkill === 'ultra-elite' || duck.userData.aiSkill === 'very-elite') {
+            steerSpeed = 0.05; // Very precise
+        } else if (duck.userData.aiSkill === 'semi-elite') {
+            steerSpeed = 0.06; // Precise
+        } else {
+            steerSpeed = 0.08; // Normal
+        }
         if (duck.userData.steerDirection !== 0) {
             duck.userData.xPosition += duck.userData.steerDirection * steerSpeed;
         }
@@ -1462,8 +1491,19 @@ const updateCompetitorDucks = (deltaTime) => {
                     const distAhead = obstacle.position.z - duck.position.z;
                     const xDist = Math.abs(obstacle.position.x - duck.userData.xPosition);
 
-                    // Elite ducks jump earlier and more accurately
-                    const jumpDistance = duck.userData.aiSkill === 'elite' ? 8 : 5;
+                    // Elite tiers jump earlier and more accurately
+                    let jumpDistance;
+                    if (duck.userData.aiSkill === 'ultra-elite') {
+                        jumpDistance = 10; // Ultra elite: jump very early
+                    } else if (duck.userData.aiSkill === 'very-elite') {
+                        jumpDistance = 9; // Very elite: jump early
+                    } else if (duck.userData.aiSkill === 'semi-elite') {
+                        jumpDistance = 8; // Semi elite: jump ahead
+                    } else if (duck.userData.aiSkill === 'good') {
+                        jumpDistance = 6; // Good: decent anticipation
+                    } else {
+                        jumpDistance = 5; // Average: basic jumping
+                    }
 
                     if (distAhead > 0 && distAhead < jumpDistance && xDist < 3) {
                         // Obstacle ahead! Jump!
