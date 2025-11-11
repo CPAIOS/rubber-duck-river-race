@@ -2320,6 +2320,7 @@ const initMobileControls = () => {
     const mobileControls = document.getElementById('mobileControls');
     const leftBtn = document.getElementById('leftBtn');
     const rightBtn = document.getElementById('rightBtn');
+    const jumpBtn = document.getElementById('jumpBtn');
     const gasBtn = document.getElementById('gasBtn');
     const brakeBtn = document.getElementById('brakeBtn');
 
@@ -2346,6 +2347,19 @@ const initMobileControls = () => {
         rightBtn.addEventListener('touchend', (e) => {
             e.preventDefault();
             buttonState.right = false;
+        });
+    }
+
+    if (jumpBtn) {
+        jumpBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (!gameState.isJumping && gameState.jumpHeight === 0) {
+                gameState.isJumping = true;
+                gameState.duckVelocityY = 0.25; // Jump strength
+            }
+        });
+        jumpBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
         });
     }
 
