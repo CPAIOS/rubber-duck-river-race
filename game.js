@@ -3046,15 +3046,17 @@ const gameLoop = () => {
                 gameState.health -= totalDamage;
                 console.log(`💥 Eagle grab (${eagleGrabDamage}) + fall damage (${fallDamage}) = ${totalDamage} total! Health: ${gameState.health}`);
 
-                // RUBBER DUCK BOUNCES! Reverse velocity with damping
-                duckFallVelocity = Math.abs(duckFallVelocity) * 0.5; // Bounce up with 50% energy
+                // RUBBER DUCK BOUNCES! Small bounce (1-2 feet)
                 gameState.isJumping = true; // Treat bounce as a jump
-                gameState.jumpHeight = 2; // Start at 2 units above water
-                gameState.jumpVelocity = duckFallVelocity; // Use bounce velocity
+                gameState.jumpHeight = 1.5; // Small bounce - about 1.5 feet
+                gameState.jumpVelocity = 0.15; // Small upward velocity for gentle bounce
 
                 duckIsFalling = false; // Exit falling state
 
-                console.log(`🦆 BOUNCE! Duck springs back up with velocity ${duckFallVelocity.toFixed(2)}`);
+                // Prevent waterfall damage from triggering on the bounce landing
+                gameState.hasTakenWaterfallDamage = true;
+
+                console.log(`🦆 BOUNCE! Duck springs back up gently (1.5 feet)`);
             }
         }
 
