@@ -2326,9 +2326,7 @@ const initMobileControls = () => {
     const gasBtn = document.getElementById('gasBtn');
     const brakeBtn = document.getElementById('brakeBtn');
 
-    if (isMobile && mobileControls) {
-        mobileControls.style.display = 'flex';
-    }
+    // Mobile controls hidden by default - shown when game starts
 
     if (leftBtn) {
         leftBtn.addEventListener('touchstart', (e) => {
@@ -3173,6 +3171,13 @@ const startGame = () => {
     gameState.score = 0;
     gameState.speed = gameState.targetSpeed;
     gameState.duckPosition = 0;
+
+    // Safety check: ensure splinePath exists (in case of restart issues)
+    if (!splinePath) {
+        console.error('⚠️ splinePath is null! Reinitializing...');
+        splinePath = new SplinePathSystem();
+    }
+
     gameState.splineT = splinePath.distanceToT(15); // Start in middle of pack
     gameState.level = 1; // RESET level
     gameState.position = 75; // Start in middle position (~75/151)
@@ -3238,6 +3243,14 @@ const startGame = () => {
 
     document.getElementById('startScreen').classList.add('hidden');
     document.getElementById('endScreen').classList.add('hidden'); // Hide end screen too
+
+    // Show mobile controls when game starts
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const mobileControls = document.getElementById('mobileControls');
+    if (isMobile && mobileControls) {
+        mobileControls.style.display = 'flex';
+    }
+
     updateHUD();
 };
 
@@ -3255,6 +3268,12 @@ const endGame = () => {
     }
 
     finalScore.textContent = `Final Score: ${gameState.score} | Distance: ${Math.floor(gameState.distance)}m`;
+
+    // Hide mobile controls on end screen
+    const mobileControls = document.getElementById('mobileControls');
+    if (mobileControls) {
+        mobileControls.style.display = 'none';
+    }
 
     document.getElementById('endScreen').classList.remove('hidden');
 };
