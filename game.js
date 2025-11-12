@@ -3253,11 +3253,19 @@ const endGame = () => {
 
     const resultText = document.getElementById('resultText');
     const finalScore = document.getElementById('finalScore');
+    const level2Btn = document.getElementById('level2Btn');
 
     if (gameState.health <= 0) {
         resultText.textContent = 'Your duck sank!';
+        level2Btn.style.display = 'none'; // Hide Level 2 button if you died
     } else {
         resultText.textContent = 'Great race!';
+        // Show Level 2 button only if completing Level 1
+        if (gameState.currentLevel === 1) {
+            level2Btn.style.display = 'block';
+        } else {
+            level2Btn.style.display = 'none';
+        }
     }
 
     finalScore.textContent = `Final Score: ${gameState.score} | Distance: ${Math.floor(gameState.distance)}m`;
@@ -3481,6 +3489,9 @@ const transitionToLevel2 = () => {
     // Reset cutscene flags
     finishLineCutsceneActive = false;
     finishLineCutsceneStartTime = 0;
+
+    // Start playing Level 2!
+    gameState.isPlaying = true;
 
     console.log(`✅ Level 2 loaded! Starting at cave entrance. Health: ${gameState.health}% | Score: ${gameState.score}`);
 };
@@ -3775,21 +3786,13 @@ const gameLoop = () => {
             );
         }
 
-        // LEVEL TRANSITION or END GAME at 2100m (100m after finish line for cool-down float)
+        // END GAME at 2100m (100m after finish line for cool-down float)
         if (gameState.distance >= 2100 && gameState.isPlaying) {
-            if (gameState.currentLevel === 1) {
-                // Transition to Level 2!
-                console.log(`🎉 LEVEL 1 COMPLETE! Entering the CAVE... | Score: ${gameState.score} | Health: ${gameState.health}%`);
-                transitionToLevel2();
-                return;
-            } else {
-                // Level 2 complete - end game
-                console.log(`🎉 VICTORY! Final Score: ${gameState.score} | Distance: ${gameState.distance.toFixed(0)}m | Health: ${gameState.health}%`);
-                gameState.isPlaying = false;
-                finishLineCutsceneActive = false;
-                endGame();
-                return;
-            }
+            console.log(`🎉 VICTORY! Final Score: ${gameState.score} | Distance: ${gameState.distance.toFixed(0)}m | Health: ${gameState.health}%`);
+            gameState.isPlaying = false;
+            finishLineCutsceneActive = false;
+            endGame();
+            return;
         }
 
         // Get current position on spline
@@ -4519,11 +4522,16 @@ window.addEventListener('resize', () => {
 document.addEventListener('DOMContentLoaded', () => {
     const startBtn = document.getElementById('startBtn');
     const restartBtn = document.getElementById('restartBtn');
+    const level2Btn = document.getElementById('level2Btn');
 
     startBtn.addEventListener('click', startGame);
     restartBtn.addEventListener('click', () => {
         document.getElementById('endScreen').classList.add('hidden');
         startGame();
+    });
+    level2Btn.addEventListener('click', () => {
+        document.getElementById('endScreen').classList.add('hidden');
+        transitionToLevel2();
     });
 
     initMobileControls();
