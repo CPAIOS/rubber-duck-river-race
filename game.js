@@ -3458,6 +3458,13 @@ const transitionToLevel2 = () => {
     competitorDucks.forEach(duck => scene.remove(duck));
     competitorDucks.length = 0;
 
+    // Clear Level 1 specific objects (eagle, banners, etc)
+    if (eagle) {
+        scene.remove(eagle);
+        eagle = null;
+    }
+    eagleHasAttacked = false;
+
     // Update level
     gameState.currentLevel = 2;
 
@@ -3473,13 +3480,19 @@ const transitionToLevel2 = () => {
     // Create new Level 2 spline path
     splinePath = new SplinePathSystem(2);
 
-    // Clear canyon walls
-    scene.children = scene.children.filter(child => {
+    // Clear canyon walls properly
+    const wallsToRemove = [];
+    scene.children.forEach(child => {
         if (child.userData && child.userData.isCanyonWall) {
-            return false; // Remove canyon walls
+            wallsToRemove.push(child);
         }
-        return true; // Keep everything else
     });
+    wallsToRemove.forEach(wall => {
+        if (wall.geometry) wall.geometry.dispose();
+        if (wall.material) wall.material.dispose();
+        scene.remove(wall);
+    });
+    console.log(`✅ Removed ${wallsToRemove.length} canyon walls`);
 
     // Build cave walls and water for Level 2
     buildCaveWalls();
