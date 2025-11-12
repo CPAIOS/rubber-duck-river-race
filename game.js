@@ -3431,6 +3431,18 @@ const transitionToLevel2 = () => {
     obstacles.forEach(obstacle => scene.remove(obstacle));
     obstacles.length = 0;
 
+    // Clear water sections
+    waterSections.forEach(water => {
+        if (water.geometry) water.geometry.dispose();
+        if (water.material) water.material.dispose();
+        scene.remove(water);
+    });
+    waterSections.length = 0;
+
+    // Clear competitor ducks
+    competitorDucks.forEach(duck => scene.remove(duck));
+    competitorDucks.length = 0;
+
     // Update level
     gameState.currentLevel = 2;
 
@@ -3446,7 +3458,7 @@ const transitionToLevel2 = () => {
     // Create new Level 2 spline path
     splinePath = new SplinePathSystem(2);
 
-    // Clear and rebuild canyon walls for cave (narrower)
+    // Clear canyon walls
     scene.children = scene.children.filter(child => {
         if (child.userData && child.userData.isCanyonWall) {
             return false; // Remove canyon walls
@@ -3454,8 +3466,12 @@ const transitionToLevel2 = () => {
         return true; // Keep everything else
     });
 
-    // Build cave walls (narrower than canyon)
+    // Build cave walls and water for Level 2
     buildCaveWalls();
+    createCurvedRiverChannel(); // Rebuild water surface for new spline path
+
+    // Respawn competitor ducks at start of Level 2
+    spawnCompetitorDucks();
 
     // Reset cutscene flags
     finishLineCutsceneActive = false;
