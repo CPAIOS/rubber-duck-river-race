@@ -170,6 +170,7 @@ let realWater, sky;
 
 // Water sections for infinite river
 const waterSections = [];
+let sharedWaterNormalsTexture = null; // Shared texture loaded once
 
 // 🎢 Spline Path System for curved log flume course
 let splinePath = null;
@@ -2441,18 +2442,22 @@ const createCurvedRiverChannel = () => {
     console.log(`Creating ${numSections} curved water sections...`);
 
     // CRITICAL FIX: Load texture ONCE and share it across all sections!
-    console.log('📥 Loading shared water normals texture...');
-    const sharedWaterNormalsTexture = new THREE.TextureLoader().load(
-        'https://threejs.org/examples/textures/waternormals.jpg',
-        function (texture) {
-            texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-            console.log('✅ Shared water normals texture loaded successfully!');
-        },
-        undefined,
-        function (error) {
-            console.error('❌ CRITICAL: Shared water normals texture FAILED to load:', error);
-        }
-    );
+    if (!sharedWaterNormalsTexture) {
+        console.log('📥 Loading shared water normals texture...');
+        sharedWaterNormalsTexture = new THREE.TextureLoader().load(
+            'https://threejs.org/examples/textures/waternormals.jpg',
+            function (texture) {
+                texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+                console.log('✅ Shared water normals texture loaded successfully!');
+            },
+            undefined,
+            function (error) {
+                console.error('❌ CRITICAL: Shared water normals texture FAILED to load:', error);
+            }
+        );
+    } else {
+        console.log('♻️ Reusing already-loaded water normals texture');
+    }
 
     console.log(`Starting water section loop: ${numSections} sections to create`);
 
