@@ -33,6 +33,7 @@ const gameState = {
     duckRotationX: 0,
     duckRotationZ: 0,
     // Level progression
+    currentLevel: 1,
     level: 1,
     levelThreshold: 1500, // Distance to reach next level
     // Waterfall tracking
@@ -3276,6 +3277,193 @@ const checkCollision = (obj1, obj2, threshold = 2) => {
     return distance < threshold;
 };
 
+// Build Cave Walls (narrower and with ceiling)
+const buildCaveWalls = () => {
+    console.log('🕳️ Building cave walls and ceiling...');
+
+    const centerPoints = splinePath.spline.getPoints(500);
+    const wallHeight = 25; // Lower ceiling than canyon
+    const wallThickness = 15;
+    const wallOffset = 12; // MUCH narrower than canyon (was 16+)
+
+    const createCaveWall = (sideOffset) => {
+        const wallVertices = [];
+        const wallIndices = [];
+        const wallColors = [];
+
+        for (let i = 0; i < centerPoints.length; i++) {
+            const point = centerPoints[i];
+            const t = i / centerPoints.length;
+            const tangent = splinePath.spline.getTangent(t);
+            const perpendicular = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
+
+            const innerBase = point.clone().add(perpendicular.clone().multiplyScalar(sideOffset));
+            const innerTop = innerBase.clone();
+            innerTop.y += wallHeight;
+
+            const outerBase = point.clone().add(perpendicular.clone().multiplyScalar(sideOffset + Math.sign(sideOffset) * wallThickness));
+            const outerTop = outerBase.clone();
+            outerTop.y += wallHeight;
+
+            wallVertices.push(innerBase.x, innerBase.y - 5, innerBase.z);
+            wallVertices.push(innerTop.x, innerTop.y, innerTop.z);
+            wallVertices.push(outerBase.x, outerBase.y - 5, outerBase.z);
+            wallVertices.push(outerTop.x, outerTop.y, outerTop.z);
+
+            // Dark cave rock color
+            const rockColor = 0.2 + Math.random() * 0.1;
+            for (let v = 0; v < 4; v++) {
+                wallColors.push(rockColor, rockColor * 0.8, rockColor * 0.7);
+            }
+
+            if (i > 0) {
+                const curr = i * 4;
+                const prev = (i - 1) * 4;
+
+                wallIndices.push(prev, prev + 1, curr);
+                wallIndices.push(prev + 1, curr + 1, curr);
+                wallIndices.push(prev + 1, prev + 3, curr + 1);
+                wallIndices.push(prev + 3, curr + 3, curr + 1);
+                wallIndices.push(prev + 2, curr + 2, prev + 3);
+                wallIndices.push(prev + 3, curr + 2, curr + 3);
+                wallIndices.push(prev, curr, prev + 2);
+                wallIndices.push(prev + 2, curr, curr + 2);
+            }
+        }
+
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(wallVertices, 3));
+        geometry.setAttribute('color', new THREE.Float32BufferAttribute(wallColors, 3));
+        geometry.setIndex(wallIndices);
+        geometry.computeVertexNormals();
+
+        const material = new THREE.MeshStandardMaterial({
+            color: 0x3a3a3a,
+            roughness: 0.95,
+            vertexColors: true,
+            side: THREE.DoubleSide
+        });
+
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.userData.isCanyonWall = true; // Tag for removal later
+        return mesh;
+    };
+
+    // Create cave ceiling
+    const createCaveCeiling = () => {
+        const ceilingVertices = [];
+        const ceilingIndices = [];
+        const ceilingColors = [];
+
+        for (let i = 0; i < centerPoints.length; i++) {
+            const point = centerPoints[i];
+            const t = i / centerPoints.length;
+            const tangent = splinePath.spline.getTangent(t);
+            const perpendicular = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
+
+            // Vary ceiling height for natural cave look
+            const ceilingHeight = wallHeight + Math.sin(i * 0.3) * 3;
+
+            const leftPoint = point.clone().add(perpendicular.clone().multiplyScalar(-wallOffset));
+            leftPoint.y += ceilingHeight;
+
+            const rightPoint = point.clone().add(perpendicular.clone().multiplyScalar(wallOffset));
+            rightPoint.y += ceilingHeight;
+
+            ceilingVertices.push(leftPoint.x, leftPoint.y, leftPoint.z);
+            ceilingVertices.push(rightPoint.x, rightPoint.y, rightPoint.z);
+
+            // Very dark ceiling
+            const caveColor = 0.15 + Math.random() * 0.05;
+            ceilingColors.push(caveColor, caveColor * 0.8, caveColor * 0.7);
+            ceilingColors.push(caveColor, caveColor * 0.8, caveColor * 0.7);
+
+            if (i > 0) {
+                const curr = i * 2;
+                const prev = (i - 1) * 2;
+
+                ceilingIndices.push(prev, curr, prev + 1);
+                ceilingIndices.push(prev + 1, curr, curr + 1);
+            }
+        }
+
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(ceilingVertices, 3));
+        geometry.setAttribute('color', new THREE.Float32BufferAttribute(ceilingColors, 3));
+        geometry.setIndex(ceilingIndices);
+        geometry.computeVertexNormals();
+
+        const material = new THREE.MeshStandardMaterial({
+            color: 0x2a2a2a,
+            roughness: 0.98,
+            vertexColors: true,
+            side: THREE.DoubleSide
+        });
+
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.userData.isCanyonWall = true;
+        return mesh;
+    };
+
+    // Add cave walls
+    const leftWall = createCaveWall(-wallOffset);
+    scene.add(leftWall);
+
+    const rightWall = createCaveWall(wallOffset);
+    scene.add(rightWall);
+
+    // Add cave ceiling!
+    const ceiling = createCaveCeiling();
+    scene.add(ceiling);
+
+    console.log('✅ Cave walls and ceiling created!');
+};
+
+// Transition to Level 2 (Cave)
+const transitionToLevel2 = () => {
+    console.log('🕳️ TRANSITIONING TO LEVEL 2: UNDERGROUND CAVE!');
+
+    // Keep current health and score!
+    const currentHealth = gameState.health;
+    const currentScore = gameState.score;
+
+    // Clear all existing obstacles
+    obstacles.forEach(obstacle => scene.remove(obstacle));
+    obstacles.length = 0;
+
+    // Update level
+    gameState.currentLevel = 2;
+
+    // Reset position to start of new level
+    gameState.splineT = 0;
+    gameState.distance = 0;
+    gameState.duckPosition = 0;
+
+    // Restore health and score
+    gameState.health = currentHealth;
+    gameState.score = currentScore;
+
+    // Create new Level 2 spline path
+    splinePath = new SplinePathSystem(2);
+
+    // Clear and rebuild canyon walls for cave (narrower)
+    scene.children = scene.children.filter(child => {
+        if (child.userData && child.userData.isCanyonWall) {
+            return false; // Remove canyon walls
+        }
+        return true; // Keep everything else
+    });
+
+    // Build cave walls (narrower than canyon)
+    buildCaveWalls();
+
+    // Reset cutscene flags
+    finishLineCutsceneActive = false;
+    finishLineCutsceneStartTime = 0;
+
+    console.log(`✅ Level 2 loaded! Starting at cave entrance. Health: ${gameState.health}% | Score: ${gameState.score}`);
+};
+
 // Game loop
 const gameLoop = () => {
     if (gameState.isPlaying) {
@@ -3566,13 +3754,21 @@ const gameLoop = () => {
             );
         }
 
-        // END GAME at 2100m (100m after finish line for cool-down float)
+        // LEVEL TRANSITION or END GAME at 2100m (100m after finish line for cool-down float)
         if (gameState.distance >= 2100 && gameState.isPlaying) {
-            console.log(`🎉 VICTORY! Final Score: ${gameState.score} | Distance: ${gameState.distance.toFixed(0)}m | Health: ${gameState.health}%`);
-            gameState.isPlaying = false;
-            finishLineCutsceneActive = false;
-            endGame();
-            return;
+            if (gameState.currentLevel === 1) {
+                // Transition to Level 2!
+                console.log(`🎉 LEVEL 1 COMPLETE! Entering the CAVE... | Score: ${gameState.score} | Health: ${gameState.health}%`);
+                transitionToLevel2();
+                return;
+            } else {
+                // Level 2 complete - end game
+                console.log(`🎉 VICTORY! Final Score: ${gameState.score} | Distance: ${gameState.distance.toFixed(0)}m | Health: ${gameState.health}%`);
+                gameState.isPlaying = false;
+                finishLineCutsceneActive = false;
+                endGame();
+                return;
+            }
         }
 
         // Get current position on spline

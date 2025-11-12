@@ -5,13 +5,18 @@ import * as THREE from 'three';
  */
 
 export class SplinePathSystem {
-    constructor() {
+    constructor(level = 1) {
         this.spline = null;
         this.totalLength = 0;
         this.sections = [];
         this.waypoints = [];
+        this.level = level;
 
-        this.createLogFlumeCoursePath();
+        if (level === 1) {
+            this.createLogFlumeCoursePath();
+        } else if (level === 2) {
+            this.createCaveCoursePath();
+        }
     }
 
     createLogFlumeCoursePath() {
@@ -142,6 +147,114 @@ export class SplinePathSystem {
         this.createThemedSections();
     }
 
+    createCaveCoursePath() {
+        console.log('🕳️ Building UNDERGROUND CAVE Course...');
+
+        // Cave course starts where Level 1 ends (around z = -2500, y = -100)
+        // MUCH tighter, more aggressive turns, steeper terrain
+        this.waypoints = [
+            // CAVE ENTRANCE - Transition from canyon
+            new THREE.Vector3(0, -100, -2500),      // Start (where L1 ends)
+            new THREE.Vector3(3, -105, -2550),      // Slight right, descending
+            new THREE.Vector3(-3, -110, -2600),     // Tight left turn
+
+            // TIGHT S-CURVES through narrow passage
+            new THREE.Vector3(6, -115, -2650),      // Sharp right
+            new THREE.Vector3(-6, -120, -2700),     // Sharp left
+            new THREE.Vector3(6, -125, -2750),      // Sharp right again
+            new THREE.Vector3(-4, -130, -2800),     // Left curve
+
+            // STEEP DROP #1 into lower chamber
+            new THREE.Vector3(0, -130, -2850),      // Drop start
+            new THREE.Vector3(0, -145, -2880),      // Mid drop (15ft)
+            new THREE.Vector3(0, -160, -2910),      // End drop
+
+            // UNDERGROUND POOL - flat section
+            new THREE.Vector3(3, -160, -2960),
+            new THREE.Vector3(-3, -160, -3010),
+
+            // SPIRAL DESCENT - circling down
+            new THREE.Vector3(5, -165, -3060),      // Right
+            new THREE.Vector3(0, -170, -3110),      // Forward
+            new THREE.Vector3(-5, -175, -3160),     // Left
+            new THREE.Vector3(0, -180, -3210),      // Forward down
+            new THREE.Vector3(5, -185, -3260),      // Right again
+
+            // NARROW SQUEEZE - tight passage
+            new THREE.Vector3(0, -190, -3300),      // Straight through
+            new THREE.Vector3(0, -195, -3340),      // Still narrow
+
+            // STEEP DROP #2 - waterfall into deep cavern
+            new THREE.Vector3(0, -195, -3380),      // Drop start
+            new THREE.Vector3(0, -215, -3410),      // Mid drop (20ft)
+            new THREE.Vector3(0, -235, -3440),      // End drop (big waterfall!)
+
+            // DEEP CAVERN - low ceiling section
+            new THREE.Vector3(-4, -235, -3490),     // Left
+            new THREE.Vector3(4, -240, -3540),      // Right, still descending
+            new THREE.Vector3(-3, -245, -3590),     // Left
+
+            // ZIGZAG through stalagmites
+            new THREE.Vector3(5, -250, -3640),      // Sharp right
+            new THREE.Vector3(-5, -255, -3690),     // Sharp left
+            new THREE.Vector3(5, -260, -3740),      // Sharp right
+            new THREE.Vector3(-5, -265, -3790),     // Sharp left
+
+            // FINAL DROP into underground lake
+            new THREE.Vector3(0, -265, -3830),      // Drop start
+            new THREE.Vector3(0, -285, -3860),      // Mid drop
+            new THREE.Vector3(0, -305, -3890),      // End drop (40ft!)
+
+            // UNDERGROUND LAKE - flat finish
+            new THREE.Vector3(3, -305, -3940),
+            new THREE.Vector3(-3, -305, -3990),
+            new THREE.Vector3(0, -305, -4040),      // FINISH!
+
+            // COOLDOWN
+            new THREE.Vector3(4, -305, -4090),
+            new THREE.Vector3(-4, -305, -4140),
+            new THREE.Vector3(0, -305, -4200)       // End
+        ];
+
+        // Create initial Catmull-Rom spline
+        const rawSpline = new THREE.CatmullRomCurve3(this.waypoints);
+        rawSpline.curveType = 'chordal';
+        rawSpline.tension = 0;
+        rawSpline.closed = false;
+
+        // Post-process to enforce downhill-only
+        console.log('🔧 Post-processing cave spline...');
+        const rawPoints = rawSpline.getPoints(2000);
+        const clampedPoints = [rawPoints[0]];
+        let minYSoFar = rawPoints[0].y;
+        let clampedCount = 0;
+
+        for (let i = 1; i < rawPoints.length; i++) {
+            const point = rawPoints[i].clone();
+            if (point.y > minYSoFar) {
+                point.y = minYSoFar;
+                clampedCount++;
+            } else {
+                minYSoFar = point.y;
+            }
+            clampedPoints.push(point);
+        }
+
+        console.log(`🔧 Clamped ${clampedCount} uphill points in cave course`);
+
+        // Create final spline
+        this.spline = new THREE.CatmullRomCurve3(clampedPoints);
+        this.spline.curveType = 'chordal';
+        this.spline.tension = 0;
+        this.spline.closed = false;
+
+        this.totalLength = this.spline.getLength();
+
+        console.log(`✅ CAVE Spline created: ${clampedPoints.length} points, ${this.totalLength.toFixed(0)}m long`);
+
+        this.createCaveThemedSections();
+    }
+
     createThemedSections() {
         this.sections = [
             {
@@ -213,6 +326,68 @@ export class SplinePathSystem {
         ];
 
         console.log(`✅ Created ${this.sections.length} themed sections`);
+    }
+
+    createCaveThemedSections() {
+        this.sections = [
+            {
+                name: "Cave Entrance",
+                startDistance: 0,
+                endDistance: 200,
+                fogColor: 0x4a3a2a,
+                fogDensity: 0.003,
+                ambientColor: 0x6a5a4a,
+                directionalIntensity: 0.5,
+                backgroundColor: 0x1a1a1a,
+                description: "Entering the underground - transition from daylight"
+            },
+            {
+                name: "Tight Passage",
+                startDistance: 200,
+                endDistance: 500,
+                fogColor: 0x2a2a3a,
+                fogDensity: 0.008,
+                ambientColor: 0x3a3a5a,
+                directionalIntensity: 0.3,
+                backgroundColor: 0x0a0a0a,
+                description: "Narrow S-curves through cramped cave tunnels"
+            },
+            {
+                name: "Deep Cavern",
+                startDistance: 500,
+                endDistance: 900,
+                fogColor: 0x1a1a2a,
+                fogDensity: 0.012,
+                ambientColor: 0x2a2a4a,
+                directionalIntensity: 0.2,
+                backgroundColor: 0x000000,
+                description: "Far underground, glowing crystals the only light"
+            },
+            {
+                name: "Stalagmite Forest",
+                startDistance: 900,
+                endDistance: 1300,
+                fogColor: 0x2a3a2a,
+                fogDensity: 0.010,
+                ambientColor: 0x3a4a3a,
+                directionalIntensity: 0.25,
+                backgroundColor: 0x050505,
+                description: "Zigzagging through towering rock formations"
+            },
+            {
+                name: "Underground Lake",
+                startDistance: 1300,
+                endDistance: 1700,
+                fogColor: 0x1a2a3a,
+                fogDensity: 0.005,
+                ambientColor: 0x2a3a5a,
+                directionalIntensity: 0.4,
+                backgroundColor: 0x0a0a1a,
+                description: "Massive cavern with subterranean waters - finish!"
+            }
+        ];
+
+        console.log(`✅ Created ${this.sections.length} cave themed sections`);
     }
 
     getPointAt(t) {
