@@ -2541,9 +2541,15 @@ const createCurvedRiverChannel = () => {
     }
 
     console.log('✅ Curved Water shader river created!');
+};
 
+// Build Level 1 Canyon Walls
+const buildLevel1CanyonWalls = () => {
     // Create SOLID canyon walls with NO GAPS
     console.log('🏔️ Building solid curved canyon walls (gap-free)...');
+
+    const riverWidth = 30;
+    const centerPoints = splinePath.spline.getPoints(500);
 
     const wallHeight = 40;
     const wallThickness = 20;
@@ -2684,6 +2690,7 @@ const init = () => {
 
     // 🌊 BUILD THE CURVED RIVER!
     createCurvedRiverChannel();
+    buildLevel1CanyonWalls(); // Build Level 1 canyon walls
 
     // 🏁 FINISH LINE - Checkered banner at 2000m
     const finishT = splinePath.distanceToT(2000);
