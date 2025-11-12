@@ -39,6 +39,8 @@ const gameState = {
     hasTakenWaterfallDamage: false,
     // Grace period to prevent immediate damage on start
     startGracePeriod: 0,
+    // Invincibility frames after taking damage (prevents getting stuck on rocks)
+    invincibilityFrames: 0,
     // 🎢 SPLINE PATH SYSTEM
     splineT: 0, // Position on spline (0.0 to 1.0)
     currentSection: null, // Current themed section
@@ -196,7 +198,7 @@ let duckFallStartY = 0; // Y position where fall started
 
 // 🦆🦆🦆 Competitor Ducks System
 let competitorDucks = []; // Array of all competitor ducks
-const NUM_COMPETITORS = 150; // Number of competitor ducks
+const NUM_COMPETITORS = 100; // Number of competitor ducks
 const DUCK_COLORS = [
     // Blues (more variety)
     0x0000FF, // Pure Blue
@@ -3157,12 +3159,12 @@ const init = () => {
 const startGame = () => {
     console.log('🎮 Starting game...');
 
-    // Get duck number from input (or assign 151 if blank)
+    // Get duck number from input (or assign 101 if blank)
     const duckNumberInput = document.getElementById('duckNumber');
     const inputValue = duckNumberInput ? parseInt(duckNumberInput.value) : null;
-    gameState.duckNumber = (inputValue && inputValue >= 1 && inputValue <= 151)
+    gameState.duckNumber = (inputValue && inputValue >= 1 && inputValue <= 101)
         ? inputValue
-        : 151; // Player is duck #151 (competitors are 1-150)
+        : 101; // Player is duck #101 (competitors are 1-100)
     console.log(`🦆 Player duck #${gameState.duckNumber}`);
 
     gameState.isPlaying = true;
@@ -3280,6 +3282,10 @@ const gameLoop = () => {
         // Decrease grace period counter
         if (gameState.startGracePeriod > 0) {
             gameState.startGracePeriod--;
+        }
+        // Decrease invincibility frames
+        if (gameState.invincibilityFrames > 0) {
+            gameState.invincibilityFrames--;
         }
         // Duck controls - using same logic as truck from reference game
         let moveSpeed = 0.15;
@@ -3954,9 +3960,6 @@ const gameLoop = () => {
                     const isHighEnough = gameState.jumpHeight > 2.0;
 
                     if (!isHighEnough) {
-                        gameState.health -= obstacle.userData.damage || 7; // Direct damage, no multiplier
-                        gameState.score -= 50;
-
                         // 💥 STRONG BUMP BACK PHYSICS - Obstacle collision!
                         const bumpAngle = Math.atan2(duck.position.z - obstacle.position.z,
                                                        duck.position.x - obstacle.position.x);
@@ -3971,7 +3974,15 @@ const gameLoop = () => {
                         gameState.splineT -= backwardBump / splinePath.totalLength;
                         gameState.splineT = Math.max(0, gameState.splineT); // Don't go negative
 
-                        console.log(`💥 ROCK HIT! Bumped backward ${backwardBump.toFixed(2)} units`);
+                        // Apply damage only if not invincible (prevents stuck-on-rock instant death)
+                        if (gameState.invincibilityFrames <= 0) {
+                            gameState.health -= obstacle.userData.damage || 7; // Direct damage, no multiplier
+                            gameState.score -= 50;
+                            gameState.invincibilityFrames = 60; // 1 second of invincibility at 60fps
+                            console.log(`💥 ROCK HIT! Bumped backward ${backwardBump.toFixed(2)} units - invincible for 1s`);
+                        } else {
+                            console.log(`💫 Hit while invincible (${gameState.invincibilityFrames} frames left)`);
+                        }
 
                         // DON'T remove obstacle - it stays there to block you!
                     } else {
