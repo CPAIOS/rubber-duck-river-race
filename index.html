@@ -273,7 +273,12 @@
     </div>
 
     <div id="startScreen">
+        <img src="rotary_3.png" alt="Rotary Logo" style="max-width: 250px; margin-bottom: 20px;">
         <h1>🦆 Rubber Duck River Race 🌊</h1>
+        <div style="display: flex; gap: 30px; margin: 20px 0;">
+            <img src="duck_image.jpg" alt="Duck" style="width: 120px; height: 120px; border-radius: 10px; object-fit: cover;">
+            <img src="eagle_image.jpg" alt="Eagle" style="width: 120px; height: 120px; border-radius: 10px; object-fit: cover;">
+        </div>
         <p>Navigate your rubber duck down a treacherous river!</p>
         <p style="margin-top: 20px;"><strong>Choose Your Race Number:</strong></p>
         <input type="number" id="duckNumber" min="1" max="151" placeholder="1-151"
@@ -287,7 +292,9 @@
     </div>
 
     <div id="endScreen" class="hidden">
+        <img src="rotary_3.png" alt="Rotary Logo" style="max-width: 250px; margin-bottom: 20px;">
         <h1>Race Complete!</h1>
+        <img src="duck_image.jpg" alt="Champion Duck" style="width: 150px; height: 150px; border-radius: 10px; object-fit: cover; margin: 20px 0;">
         <p id="resultText"></p>
         <p id="finalScore"></p>
         <button id="restartBtn">Race Again</button>
