@@ -2639,9 +2639,11 @@ const createCurvedRiverChannel = () => {
 
     // Create curved walls that follow the spline path
     const leftWall = createSolidWall(-wallOffset);
+    leftWall.userData.isCanyonWall = true; // Tag for removal on level transition
     scene.add(leftWall);
 
     const rightWall = createSolidWall(wallOffset);
+    rightWall.userData.isCanyonWall = true; // Tag for removal on level transition
     scene.add(rightWall);
 
     // Ground plane also disabled
