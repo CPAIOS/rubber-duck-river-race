@@ -3171,6 +3171,7 @@ const startGame = () => {
     gameState.score = 0;
     gameState.speed = gameState.targetSpeed;
     gameState.duckPosition = 0;
+    gameState.startTime = Date.now(); // Start race timer
 
     // Safety check: ensure splinePath exists (in case of restart issues)
     if (!splinePath) {
@@ -3267,7 +3268,14 @@ const endGame = () => {
         resultText.textContent = 'Great race!';
     }
 
-    finalScore.textContent = `Final Score: ${gameState.score} | Distance: ${Math.floor(gameState.distance)}m`;
+    // Calculate final time
+    const elapsed = Date.now() - gameState.startTime;
+    const seconds = Math.floor(elapsed / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    const timeStr = `${minutes}:${secs.toString().padStart(2, '0')}`;
+
+    finalScore.textContent = `Time: ${timeStr} | Score: ${gameState.score} | Distance: ${Math.floor(gameState.distance)}m`;
 
     // Hide mobile controls on end screen
     const mobileControls = document.getElementById('mobileControls');
@@ -3285,6 +3293,13 @@ const updateHUD = () => {
     document.getElementById('health').textContent = Math.max(0, Math.floor(gameState.health));
     document.getElementById('distance').textContent = Math.floor(gameState.distance);
     document.getElementById('score').textContent = gameState.score;
+
+    // Update timer
+    const elapsed = Date.now() - gameState.startTime;
+    const seconds = Math.floor(elapsed / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    document.getElementById('time').textContent = `${minutes}:${secs.toString().padStart(2, '0')}`;
 };
 
 // Collision detection
