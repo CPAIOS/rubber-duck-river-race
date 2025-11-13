@@ -3275,7 +3275,25 @@ const endGame = () => {
     const secs = seconds % 60;
     const timeStr = `${minutes}:${secs.toString().padStart(2, '0')}`;
 
-    finalScore.textContent = `Time: ${timeStr} | Score: ${gameState.score} | Distance: ${Math.floor(gameState.distance)}m`;
+    // Calculate composite score based on placement, health, and time
+    let finalScore = 0;
+
+    // Placement points (1st-15th get points)
+    const placementPoints = [1500, 1400, 1300, 1200, 1100, 1000, 900, 800, 700, 600, 500, 400, 300, 200, 100];
+    if (gameState.position <= 15) {
+        finalScore += placementPoints[gameState.position - 1];
+    }
+
+    // Health bonus: 10 points per % health remaining
+    finalScore += Math.max(0, Math.floor(gameState.health)) * 10;
+
+    // Time bonus: 3000 base minus 2 points per second (faster = higher score)
+    const timeBonus = Math.max(0, 3000 - (seconds * 2));
+    finalScore += timeBonus;
+
+    gameState.score = finalScore;
+
+    document.getElementById('finalScore').textContent = `Time: ${timeStr} | Score: ${finalScore} | Position: ${gameState.position}/${gameState.totalDucks}`;
 
     // Hide mobile controls on end screen
     const mobileControls = document.getElementById('mobileControls');
@@ -3657,7 +3675,6 @@ const gameLoop = () => {
 
                 if (isPerfectJump) {
                     console.log('🦆✨ PERFECT JUMP over the drop!');
-                    gameState.score += 50; // Bonus for perfect jump
                 } else {
                     const dropSize = Math.abs(slope) * 30; // Estimate drop height
                     const damage = Math.min(15, Math.floor(dropSize * 0.5)); // 50% damage for rubber duck! Cap at 15
@@ -3986,7 +4003,6 @@ const gameLoop = () => {
                     // Rapids already handled above with physics
                     // Extra damage if you hit a rock (50% for rubber duck!)
                     gameState.health -= Math.floor((obstacle.userData.damage || 15) * 0.5);
-                    gameState.score -= 20;
                 } else if (obstacle.userData.type === 'shader_waterfall') {
                     // Waterfall already handled above
                 } else if (obstacle.userData.type === 'rock' || obstacle.userData.type === 'log') {
@@ -4011,7 +4027,6 @@ const gameLoop = () => {
                         // Apply damage only if not invincible (prevents stuck-on-rock instant death)
                         if (gameState.invincibilityFrames <= 0) {
                             gameState.health -= obstacle.userData.damage || 7; // Direct damage, no multiplier
-                            gameState.score -= 50;
                             gameState.invincibilityFrames = 60; // 1 second of invincibility at 60fps
                             console.log(`💥 ROCK HIT! Bumped backward ${backwardBump.toFixed(2)} units - invincible for 1s`);
                         } else {
@@ -4021,7 +4036,6 @@ const gameLoop = () => {
                         // DON'T remove obstacle - it stays there to block you!
                     } else {
                         // Successfully jumped over! Bonus points
-                        gameState.score += 100;
                     }
                 }
             }
@@ -4169,7 +4183,6 @@ const gameLoop = () => {
                         eagleSwoopHasTouchedWater = true;
                         // Create water splash effect
                         console.log('💦 Eagle\'s claws touch the water! *SPLASH*');
-                        gameState.score += 100; // Bonus for making eagle miss!
                     }
                 }
 
@@ -4188,7 +4201,6 @@ const gameLoop = () => {
                         // SUCCESSFUL DODGE! Try to grab a competitor duck instead
                         if (!eagleSwoopHasTouchedWater) {
                             console.log('✨🦆 YOU DODGED THE EAGLE! Nice reflexes!');
-                            gameState.score += 500; // Bonus for dodging!
                             eagleSwoopHasTouchedWater = true; // Mark as dodged (reusing flag)
 
                             // 🦅🦆 Try to grab a nearby competitor duck instead!
@@ -4218,7 +4230,6 @@ const gameLoop = () => {
                         eagleGrabTime = Date.now(); // Start grab timer
                         duckOriginalPosition = duck.position.clone();
                         // Don't apply damage yet - wait for the fall!
-                        gameState.score -= 200;
                         console.log(`🦅💀 EAGLE HAS GRABBED THE DUCK! Health: ${gameState.health} (no damage yet - will apply on splash)`);
                     }
                 }
