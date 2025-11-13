@@ -198,9 +198,18 @@ let duckFallStartY = 0; // Y position where fall started
 
 // 🦆🦆🦆 Competitor Ducks System
 let competitorDucks = []; // Array of all competitor ducks
-const NUM_COMPETITORS = 100; // Number of competitor ducks
+const NUM_COMPETITORS = 10; // Number of competitor ducks
 const DUCK_COLORS = [
-    0xFFD700  // Classic rubber duck yellow
+    0xFF0000,  // Red
+    0xFF8C00,  // Orange
+    0xFFD700,  // Gold
+    0x00FF00,  // Green
+    0x00FFFF,  // Cyan
+    0x0000FF,  // Blue
+    0x8000FF,  // Purple
+    0xFF00FF,  // Magenta
+    0xFF1493,  // Deep Pink
+    0x00FF7F   // Spring Green
 ];
 
 // 🏁 Finish line cutscene variables
@@ -1191,81 +1200,29 @@ const createCompetitorDuck = (color, raceNumber) => {
         duckGroup.add(beak);
     }
 
-    // Add race number flag
-    const flagAssembly = new THREE.Group();
+    // Race number flags removed
 
-    // Thin wire pole
-    const poleHeight = 1.6;
-    const poleRadius = 0.01;
-    const poleGeometry = new THREE.CylinderGeometry(poleRadius, poleRadius, poleHeight, 4);
-    const poleMaterial = new THREE.MeshStandardMaterial({
-        color: 0xC0C0C0,
-        roughness: 0.3,
-        metalness: 0.9
-    });
-    const pole = new THREE.Mesh(poleGeometry, poleMaterial);
-    pole.position.y = poleHeight / 2;
-    flagAssembly.add(pole);
-
-    // Create canvas with number
-    const canvas = document.createElement('canvas');
-    canvas.width = 128;
-    canvas.height = 90;
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(0, 0, 128, 90);
-    ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(1, 1, 126, 88);
-    ctx.fillStyle = '#000000';
-    ctx.font = '60px Arial';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(raceNumber.toString(), 64, 45);
-
-    // Create flag
-    const flagTexture = new THREE.CanvasTexture(canvas);
-    const flagMaterial = new THREE.MeshBasicMaterial({
-        map: flagTexture,
-        side: THREE.DoubleSide
-    });
-    const flagWidth = 0.6;
-    const flagHeight = 0.4;
-    const flagGeometry = new THREE.PlaneGeometry(flagWidth, flagHeight);
-    const flag = new THREE.Mesh(flagGeometry, flagMaterial);
-    flag.position.set(flagWidth / 2, poleHeight - flagHeight / 2, 0);
-    flagAssembly.add(flag);
-
-    // Position flag at center back of duck (same as player duck)
-    flagAssembly.position.set(0, 0.65, 1.0); // Center back, mid-height, at tail
-    flagAssembly.rotation.y = 0; // Flag extends to the right
-    duckGroup.add(flagAssembly);
-
-    // 🤖 AI Skill Level System
+    // 🤖 AI Skill Level System - Adjusted for 10 competitive ducks
     // Determine AI skill level based on duck number
     const skillRoll = Math.random();
     let aiSkill, baseSpeed, aiType;
 
-    if (skillRoll < 0.013) { // 1.3% Ultra Elite - YOUR MAIN RIVALS! (~2 ducks)
+    if (skillRoll < 0.20) { // 20% Ultra Elite - YOUR MAIN RIVALS! (2 ducks)
         aiSkill = 'ultra-elite';
         baseSpeed = 0.66 + Math.random() * 0.04; // 0.66-0.70 speed (very close to your max!)
         aiType = 'champion'; // The best of the best
-    } else if (skillRoll < 0.04) { // 2.7% Very Elite - TOUGH COMPETITION (~4 ducks)
+    } else if (skillRoll < 0.50) { // 30% Very Elite - TOUGH COMPETITION (3 ducks)
         aiSkill = 'very-elite';
         baseSpeed = 0.62 + Math.random() * 0.04; // 0.62-0.66 speed (really fast)
         aiType = 'aggressive'; // Will try to stay ahead
-    } else if (skillRoll < 0.10) { // 6% Semi-Elite - CHALLENGING PACK (~9 ducks)
+    } else if (skillRoll < 0.80) { // 30% Semi-Elite - CHALLENGING PACK (3 ducks)
         aiSkill = 'semi-elite';
         baseSpeed = 0.57 + Math.random() * 0.05; // 0.57-0.62 speed (challenging)
         aiType = 'aggressive'; // Will try to stay ahead
-    } else if (skillRoll < 0.25) { // 15% Good racers (~22 ducks)
+    } else { // 20% Good racers (2 ducks)
         aiSkill = 'good';
         baseSpeed = 0.50 + Math.random() * 0.10; // 0.50-0.60 speed
         aiType = 'competitive'; // Will speed up if behind
-    } else { // 75% Average racers (~113 ducks)
-        aiSkill = 'average';
-        baseSpeed = 0.28 + Math.random() * 0.22; // 0.28-0.50 speed
-        aiType = 'casual'; // Steady pace
     }
 
     // Store metadata - AI pilot attributes
@@ -1326,8 +1283,8 @@ const spawnCompetitorDucks = () => {
         const row = Math.floor(i / ducksPerRow);
         const col = i % ducksPerRow;
 
-        // Random color
-        const color = DUCK_COLORS[Math.floor(Math.random() * DUCK_COLORS.length)];
+        // Assign unique color to each duck (sequentially)
+        const color = DUCK_COLORS[i % DUCK_COLORS.length];
 
         // Sequential race number from shuffled array (1-150)
         const raceNumber = raceNumbers[i];
@@ -1346,6 +1303,7 @@ const spawnCompetitorDucks = () => {
         competitorDuck.position.set(xPos, duckPos.y + 0.2, duckPos.z);
         competitorDuck.userData.xPosition = xPos;
         competitorDuck.userData.distance = distance;
+        competitorDuck.userData.duckIndex = i; // Store index for special speed boosts
 
         scene.add(competitorDuck);
         competitorDucks.push(competitorDuck);
@@ -1403,7 +1361,16 @@ const updateCompetitorDucks = (deltaTime) => {
         }
 
         // Move duck forward at current speed (same scale as player)
-        duck.userData.distance += duck.userData.currentSpeed * deltaTime * 80; // Adjusted multiplier for competitive balance
+        let speedMultiplier = 80; // Base speed multiplier
+
+        // Special speed boosts for specific ducks
+        if (duck.userData.duckIndex === 0) {
+            speedMultiplier = 88; // Duck #0 (red) is 10% faster
+        } else if (duck.userData.duckIndex === 1) {
+            speedMultiplier = 84; // Duck #1 (orange) is 5% faster
+        }
+
+        duck.userData.distance += duck.userData.currentSpeed * deltaTime * speedMultiplier;
 
         // AI Steering logic - Elite tiers make faster, smarter decisions
         let steerInterval;
@@ -3188,10 +3155,7 @@ const startGame = () => {
     duck.rotation.z = 0;
     console.log(`🦆 Duck reset to: x=${duck.position.x.toFixed(1)}, y=${duck.position.y.toFixed(1)}, z=${duck.position.z.toFixed(1)}, waterLevel=${startPos.y.toFixed(1)}`);
 
-    // Add race number badge to duck
-    if (gameState.duckNumber && duckModelLoaded) {
-        addNumberBadgeToDuck(duck, gameState.duckNumber);
-    }
+    // Race number flags removed
 
     // 🦆🦆🦆 Spawn competitor ducks!
     spawnCompetitorDucks();
