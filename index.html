@@ -103,6 +103,15 @@
 
         /* Rotary logo removed from screen overlay - now in 3D scene as banners! */
 
+        /* Sponsor logo in bottom right corner */
+        .sponsor-logo {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 120px;
+            opacity: 0.9;
+        }
+
         .hidden {
             display: none !important;
         }
@@ -289,6 +298,7 @@
     </div>
 
     <div id="startScreen">
+        <img src="wisesage_logo.png" alt="WiseSage.ai" class="sponsor-logo">
         <img src="rotary_3.png" alt="Rotary Logo" style="width: 200px; margin-bottom: 20px;">
         <h1><img src="duck_image.jpg" alt="Rubber Duck" style="width: 60px; vertical-align: middle; border-radius: 8px; margin-right: 10px;"> Rubber Duck River Race 🌊</h1>
         <p>Navigate your rubber duck down a treacherous river!</p>
@@ -304,6 +314,7 @@
     </div>
 
     <div id="endScreen" class="hidden">
+        <img src="wisesage_logo.png" alt="WiseSage.ai" class="sponsor-logo">
         <img src="rotary_3.png" alt="Rotary Logo" style="width: 200px; margin-bottom: 20px;">
         <h1><img src="duck_image.jpg" alt="Rubber Duck" style="width: 60px; vertical-align: middle; border-radius: 8px; margin-right: 10px;"> Race Complete!</h1>
         <p id="resultText"></p>
