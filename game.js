@@ -3230,6 +3230,13 @@ const startGame = () => {
     duck.rotation.z = 0;
     console.log(`🦆 Duck reset to: x=${duck.position.x.toFixed(1)}, y=${duck.position.y.toFixed(1)}, z=${duck.position.z.toFixed(1)}, waterLevel=${startPos.y.toFixed(1)}`);
 
+    // Reset camera position to follow duck at start
+    camera.position.x = duck.position.x;
+    camera.position.z = duck.position.z + 18; // Behind duck
+    camera.position.y = duck.position.y + 16; // Above duck
+    camera.lookAt(duck.position.x, duck.position.y, duck.position.z - 10); // Look ahead
+    console.log(`📷 Camera reset to: x=${camera.position.x.toFixed(1)}, y=${camera.position.y.toFixed(1)}, z=${camera.position.z.toFixed(1)}`);
+
     // Add race number badge to duck
     if (gameState.duckNumber && duckModelLoaded) {
         addNumberBadgeToDuck(duck, gameState.duckNumber);
