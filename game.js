@@ -200,59 +200,7 @@ let duckFallStartY = 0; // Y position where fall started
 let competitorDucks = []; // Array of all competitor ducks
 const NUM_COMPETITORS = 100; // Number of competitor ducks
 const DUCK_COLORS = [
-    // Blues (more variety)
-    0x0000FF, // Pure Blue
-    0x1E90FF, // Dodger Blue
-    0x3A86FF, // Blue
-    0x2979FF, // Bright Blue
-    0x00B0FF, // Sky Blue
-    0x4169E1, // Royal Blue
-    0x5B9BD5, // Periwinkle Blue
-    0x87CEEB, // Light Sky Blue
-
-    // Purples (more variety)
-    0x8000FF, // Vivid Purple
-    0xD500F9, // Purple
-    0x651FFF, // Deep Purple
-    0x8338EC, // Purple
-    0x7C4DFF, // Lavender
-    0x9C27B0, // Magenta
-    0x9370DB, // Medium Purple
-    0xBA55D3, // Medium Orchid
-
-    // Greens (more variety)
-    0x00FF00, // Pure Green
-    0x32CD32, // Lime Green
-    0x00FF7F, // Spring Green
-    0x7FFF00, // Chartreuse
-    0x69F0AE, // Light Green
-    0x00E676, // Emerald
-    0x76FF03, // Lime
-    0x06FFA5, // Bright green
-    0x2ECC71, // Emerald Green
-    0x27AE60, // Nephritis Green
-
-    // Teals & Cyans
-    0x4ECDC4, // Teal
-    0x00BCD4, // Cyan
-    0x00E5FF, // Light Cyan
-    0x1DE9B6, // Turquoise
-    0x18FFFF, // Aqua
-    0x95E1D3, // Mint
-
-    // Warm colors for variety
-    0xFFD700, // Gold
-    0xFF6B6B, // Red
-    0xFF1744, // Bright Red
-    0xF50057, // Hot Pink
-    0xFF006E, // Pink
-    0xE91E63, // Rose
-    0xFFBE0B, // Yellow
-    0xFFEA00, // Bright Yellow
-    0xFB5607, // Orange
-    0xFF6D00, // Bright Orange
-    0xFF9100, // Amber
-    0xFF3D00  // Deep Orange
+    0xFFD700  // Classic rubber duck yellow
 ];
 
 // 🏁 Finish line cutscene variables
