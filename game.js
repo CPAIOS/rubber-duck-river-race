@@ -3648,7 +3648,7 @@ const gameLoop = () => {
 
         // Track distance traveled (actual meters along spline)
         gameState.distance = splinePath.tToDistance(gameState.splineT);
-        gameState.score = Math.floor(gameState.distance * 10);
+        // Score now calculated at end based on placement, health, and time
 
         // Update current section for themed lighting
         const newSection = splinePath.getSectionAtDistance(gameState.distance);
