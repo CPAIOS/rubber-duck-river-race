@@ -3172,13 +3172,6 @@ const startGame = () => {
     gameState.speed = gameState.targetSpeed;
     gameState.duckPosition = 0;
     gameState.startTime = Date.now(); // Start race timer
-
-    // Safety check: ensure splinePath exists (in case of restart issues)
-    if (!splinePath) {
-        console.error('⚠️ splinePath is null! Reinitializing...');
-        splinePath = new SplinePathSystem();
-    }
-
     gameState.splineT = splinePath.distanceToT(15); // Start in middle of pack
     gameState.level = 1; // RESET level
     gameState.position = 75; // Start in middle position (~75/151)
@@ -3229,13 +3222,6 @@ const startGame = () => {
     duck.rotation.x = 0;
     duck.rotation.z = 0;
     console.log(`🦆 Duck reset to: x=${duck.position.x.toFixed(1)}, y=${duck.position.y.toFixed(1)}, z=${duck.position.z.toFixed(1)}, waterLevel=${startPos.y.toFixed(1)}`);
-
-    // Reset camera position to follow duck at start
-    camera.position.x = duck.position.x;
-    camera.position.z = duck.position.z + 18; // Behind duck
-    camera.position.y = duck.position.y + 16; // Above duck
-    camera.lookAt(duck.position.x, duck.position.y, duck.position.z - 10); // Look ahead
-    console.log(`📷 Camera reset to: x=${camera.position.x.toFixed(1)}, y=${camera.position.y.toFixed(1)}, z=${camera.position.z.toFixed(1)}`);
 
     // Add race number badge to duck
     if (gameState.duckNumber && duckModelLoaded) {
