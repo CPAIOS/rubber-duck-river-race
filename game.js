@@ -3157,6 +3157,23 @@ const init = () => {
 const startGame = () => {
     console.log('🎮 Starting game...');
 
+    // === SCENE CLEANUP - Remove old competitor ducks ===
+    console.log(`🧹 Cleaning up ${competitorDucks.length} old competitor ducks...`);
+    competitorDucks.forEach(duck => {
+        scene.remove(duck);
+        // Dispose geometry and materials to free memory
+        if (duck.geometry) duck.geometry.dispose();
+        if (duck.material) {
+            if (Array.isArray(duck.material)) {
+                duck.material.forEach(mat => mat.dispose());
+            } else {
+                duck.material.dispose();
+            }
+        }
+    });
+    competitorDucks = [];
+    console.log('✅ Scene cleanup complete');
+
     // Get duck number from input (or assign 101 if blank)
     const duckNumberInput = document.getElementById('duckNumber');
     const inputValue = duckNumberInput ? parseInt(duckNumberInput.value) : null;
@@ -3323,6 +3340,8 @@ const checkCollision = (obj1, obj2, threshold = 2) => {
 
 // Game loop
 const gameLoop = () => {
+    try {
+    if (Math.random() < 0.05) console.log(`🔄 Loop: isPlaying=${gameState.isPlaying}, duck.z=${duck.position.z.toFixed(1)}`);
     if (gameState.isPlaying) {
         // Decrease grace period counter
         if (gameState.startGracePeriod > 0) {
@@ -3701,21 +3720,6 @@ const gameLoop = () => {
 
             // ✅ FIX: Reset damage flag when NOT on a steep drop anymore
             gameState.hasTakenWaterfallDamage = false;
-        }
-
-        // 🏁 FINISH LINE CUTSCENE - Camera switches to front view
-        if (finishLineCutsceneActive) {
-            // Position camera ahead of duck, looking back to see front of duck
-            camera.position.copy(finishLineCameraPosition);
-            camera.lookAt(duck.position.x, duck.position.y + 1, duck.position.z);
-            // Cutscene continues until duck reaches 2100m (cool-down zone end)
-        } else {
-            // Normal camera follows duck - adjusted for river view AND elevation
-            camera.position.x = duck.position.x; // Follow duck's X position
-            camera.position.z = duck.position.z + 18; // Camera behind duck
-            // Reduced minimum from 20 to -60 so camera follows duck down the drops more closely
-            camera.position.y = Math.max(-60, duck.position.y + 16);
-            camera.lookAt(duck.position.x, duck.position.y + 2, duck.position.z - 10); // Look ahead
         }
 
         // DISABLED: Moving terrain walls (causing performance issues and visual problems)
@@ -4294,6 +4298,27 @@ const gameLoop = () => {
 
         updateHUD();
     }
+    console.log(`✓ After isPlaying block, about to run camera code`);
+
+    // 🏁 CAMERA LOGIC - Runs EVERY frame (not just when playing) to fix restart freeze
+    console.log(`🎬 Camera code running: cutscene=${finishLineCutsceneActive}, duck.z=${duck.position.z.toFixed(1)}`);
+    if (finishLineCutsceneActive) {
+        // Position camera ahead of duck, looking back to see front of duck
+        camera.position.copy(finishLineCameraPosition);
+        camera.lookAt(duck.position.x, duck.position.y + 1, duck.position.z);
+        console.log(`📷 CUTSCENE: Camera z=${camera.position.z.toFixed(1)}, Duck z=${duck.position.z.toFixed(1)}`);
+        // Cutscene continues until duck reaches 2100m (cool-down zone end)
+    } else {
+        // Normal camera follows duck - adjusted for river view AND elevation
+        camera.position.x = duck.position.x; // Follow duck's X position
+        camera.position.z = duck.position.z + 18; // Camera behind duck
+        // Reduced minimum from 20 to -60 so camera follows duck down the drops more closely
+        camera.position.y = Math.max(-60, duck.position.y + 16);
+        camera.lookAt(duck.position.x, duck.position.y + 2, duck.position.z - 10); // Look ahead
+        if (Math.random() < 0.01) { // Log occasionally
+            console.log(`📷 NORMAL: Camera z=${camera.position.z.toFixed(1)}, Duck z=${duck.position.z.toFixed(1)}`);
+        }
+    }
 
     // Animate Water shader (for all curved water sections)
     waterSections.forEach((water, index) => {
@@ -4325,6 +4350,10 @@ const gameLoop = () => {
             gameLoop.lastStartScreenRender = Date.now();
         }
     }
+    } catch (error) {
+        console.error('❌ GAME LOOP ERROR:', error);
+        console.error('Stack:', error.stack);
+    }
 
     requestAnimationFrame(gameLoop);
 };
@@ -4343,8 +4372,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     startBtn.addEventListener('click', startGame);
     restartBtn.addEventListener('click', () => {
-        document.getElementById('endScreen').classList.add('hidden');
-        startGame();
+        location.reload(); // Simple fix: just reload the page
     });
 
     initMobileControls();
