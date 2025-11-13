@@ -3276,24 +3276,24 @@ const endGame = () => {
     const timeStr = `${minutes}:${secs.toString().padStart(2, '0')}`;
 
     // Calculate composite score based on placement, health, and time
-    let finalScore = 0;
+    let calculatedScore = 0;
 
     // Placement points (1st-15th get points)
     const placementPoints = [1500, 1400, 1300, 1200, 1100, 1000, 900, 800, 700, 600, 500, 400, 300, 200, 100];
     if (gameState.position <= 15) {
-        finalScore += placementPoints[gameState.position - 1];
+        calculatedScore += placementPoints[gameState.position - 1];
     }
 
     // Health bonus: 10 points per % health remaining
-    finalScore += Math.max(0, Math.floor(gameState.health)) * 10;
+    calculatedScore += Math.max(0, Math.floor(gameState.health)) * 10;
 
     // Time bonus: 3000 base minus 2 points per second (faster = higher score)
     const timeBonus = Math.max(0, 3000 - (seconds * 2));
-    finalScore += timeBonus;
+    calculatedScore += timeBonus;
 
-    gameState.score = finalScore;
+    gameState.score = calculatedScore;
 
-    document.getElementById('finalScore').textContent = `Time: ${timeStr} | Score: ${finalScore} | Position: ${gameState.position}/${gameState.totalDucks}`;
+    finalScore.textContent = `Time: ${timeStr} | Score: ${calculatedScore} | Position: ${gameState.position}/${gameState.totalDucks}`;
 
     // Hide mobile controls on end screen
     const mobileControls = document.getElementById('mobileControls');
